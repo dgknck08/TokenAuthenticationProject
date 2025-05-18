@@ -17,7 +17,19 @@ public class ProfileController {
 
     @GetMapping
     public UserProfileDto getProfile(Authentication authentication) {
-        String username = authentication.getName(); // JWT'den gelen kullanıcı
+        String username = authentication.getName();
         return profileService.getUserProfile(username);
+    }
+
+    @PutMapping
+    public UserProfileDto updateProfile(Authentication authentication, @RequestBody UserProfileDto updatedProfile) {
+        String username = authentication.getName();
+        return profileService.updateUserProfile(username, updatedProfile);
+    }
+
+    @DeleteMapping
+    public void deleteProfile(Authentication authentication) {
+        String username = authentication.getName();
+        profileService.deleteUser(username);
     }
 }

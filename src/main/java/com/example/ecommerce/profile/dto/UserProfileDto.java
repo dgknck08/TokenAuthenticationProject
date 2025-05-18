@@ -3,12 +3,30 @@ package com.example.ecommerce.profile.dto;
 
 
 public class UserProfileDto {
-    private Long id;
-    private String username;
-    private String email;
-    private String role;
+	 private Long id;
+	    private String username;
+	    private String email;
+	    private String role;
+	    private String firstName;
+	    private String lastName;
 
-    // Getters & Setters
+    public String getFirstName() {
+			return firstName;
+		}
+
+		public void setFirstName(String firstName) {
+			this.firstName = firstName;
+		}
+
+		public String getLastName() {
+			return lastName;
+		}
+
+		public void setLastName(String lastName) {
+			this.lastName = lastName;
+		}
+
+	// Getters & Setters
     public Long getId() {
         return id;
     }
