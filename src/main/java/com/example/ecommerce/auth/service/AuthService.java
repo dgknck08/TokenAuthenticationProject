@@ -1,9 +1,6 @@
 package com.example.ecommerce.auth.service;
 
-import com.example.ecommerce.auth.dto.AuthResponse;
-import com.example.ecommerce.auth.dto.LoginRequest;
-import com.example.ecommerce.auth.dto.RefreshTokenRequest;
-import com.example.ecommerce.auth.dto.RegisterRequest;
+import com.example.ecommerce.auth.dto.*;
 import com.example.ecommerce.auth.exception.InvalidCredentialsException;
 import com.example.ecommerce.auth.exception.UserAlreadyExistsException;
 import com.example.ecommerce.auth.exception.UserNotFoundException;
@@ -19,7 +16,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthService {
 
-    private final UserService userService;  // UserRepository yerine UserService kullanıyoruz
+    private final UserService userService;  
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
     private final AuthenticationManager authenticationManager;
@@ -34,23 +31,21 @@ public class AuthService {
         this.authenticationManager = authenticationManager;
     }
 
-    public AuthResponse register(RegisterRequest request) {
+    public RegisterResponse register(RegisterRequest request) {
         if (userService.findByUsername(request.getUsername()).isPresent()) {
             throw new UserAlreadyExistsException("Kullanıcı zaten kayıtlı");
         }
 
-        // Burada UserService içinde createUser metodunu kullanabiliriz (eğer yazarsan)
-        User user = userService.createUser(request);  // Daha temiz ve sorumluluk ayrımı için
+        User user = userService.createUser(request);
 
         String accessToken = jwtTokenProvider.generateTokenWithUsername(user.getUsername());
         String refreshToken = refreshTokenService.createRefreshToken(user.getId()).getToken();
 
-        return new AuthResponse(accessToken, refreshToken, "Bearer");
+        return new RegisterResponse(accessToken, refreshToken, user.getUsername(), user.getEmail());
     }
 
-    public AuthResponse login(LoginRequest request) {
+    public LoginResponse login(LoginRequest request) {
         try {
-     
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
             );
@@ -62,16 +57,17 @@ public class AuthService {
 
             String refreshToken = refreshTokenService.createRefreshToken(user.getId()).getToken();
 
-            return new AuthResponse(accessToken, refreshToken, "Bearer");
+            return new LoginResponse(accessToken, refreshToken, user.getUsername(), user.getEmail());
         } catch (BadCredentialsException ex) {
             throw new InvalidCredentialsException("Invalid username or password");
         }
     }
 
-    public AuthResponse refreshToken(RefreshTokenRequest request) {
-        String username = refreshTokenService.validateRefreshToken(request.getRefreshToken());
+    public RefreshTokenResponse refreshToken(String refreshToken) {
+        String username = refreshTokenService.validateRefreshToken(refreshToken);
+        User user = userService.findByUsername(username)
+                               .orElseThrow(() -> new UserNotFoundException("User not found"));
         String accessToken = jwtTokenProvider.generateTokenWithUsername(username);
-        return new AuthResponse(accessToken, request.getRefreshToken(), "Bearer");
+        return new RefreshTokenResponse(accessToken, refreshToken, user.getUsername(), user.getEmail());
     }
 }
-

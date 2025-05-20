@@ -1,6 +1,7 @@
 package com.example.ecommerce.util;
 
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 public class CookieUtil {
@@ -10,56 +11,30 @@ public class CookieUtil {
     public static void addRefreshTokenCookie(HttpServletResponse response, String refreshToken, int maxAge) {
         Cookie cookie = new Cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken);
         cookie.setHttpOnly(true);
-        cookie.setSecure(true);  // Prod ortamda https kullanıyorsan true yap
-        cookie.setPath("/");
+        cookie.setSecure(false);  // Lokal test için false, prod’da true yap
+        cookie.setPath("/");      // Çok önemli, tüm pathlerde geçerli olsun
         cookie.setMaxAge(maxAge);
+        response.addCookie(cookie);
+    }
 
-        // SameSite özelliği cookie API'sinde olmadığı için header ile ekliyoruz
-        StringBuilder cookieHeader = new StringBuilder();
-        cookieHeader.append(REFRESH_TOKEN_COOKIE_NAME).append("=").append(refreshToken)
-                .append("; Max-Age=").append(maxAge)
-                .append("; Path=/")
-                .append("; HttpOnly")
-                .append("; Secure")
-                .append("; SameSite=Strict");
+    public static String getRefreshTokenFromCookie(HttpServletRequest request) {
+        if (request.getCookies() == null) return null;
 
-        response.addHeader("Set-Cookie", cookieHeader.toString());
+        for (Cookie cookie : request.getCookies()) {
+            if (REFRESH_TOKEN_COOKIE_NAME.equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+        return null;
     }
 
     public static void deleteRefreshTokenCookie(HttpServletResponse response) {
         Cookie cookie = new Cookie(REFRESH_TOKEN_COOKIE_NAME, "");
         cookie.setHttpOnly(true);
-        cookie.setSecure(true);
+        cookie.setSecure(false);
         cookie.setPath("/");
-        cookie.setMaxAge(0);
-
-        // Aynı şekilde SameSite header olarak ekle
-        StringBuilder cookieHeader = new StringBuilder();
-        cookieHeader.append(REFRESH_TOKEN_COOKIE_NAME).append("=")
-                .append("; Max-Age=0")
-                .append("; Path=/")
-                .append("; HttpOnly")
-                .append("; Secure")
-                .append("; SameSite=Strict");
-
-        response.addHeader("Set-Cookie", cookieHeader.toString());
+        cookie.setMaxAge(0);  // Silmek için maxAge 0 yap
+        response.addCookie(cookie);
     }
-
-    public static void addAccessTokenCookie(HttpServletResponse response, String accessToken, int maxAge) {
-        Cookie cookie = new Cookie("accessToken", accessToken);
-        cookie.setHttpOnly(false); // Access token frontend JS tarafından okunacaksa false olmalı
-        cookie.setSecure(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(maxAge);
-
-        StringBuilder cookieHeader = new StringBuilder();
-        cookieHeader.append("accessToken").append("=").append(accessToken)
-                .append("; Max-Age=").append(maxAge)
-                .append("; Path=/")
-                .append("; Secure")
-                .append("; SameSite=Lax");
-
-        response.addHeader("Set-Cookie", cookieHeader.toString());
-    }
-
 }
+
