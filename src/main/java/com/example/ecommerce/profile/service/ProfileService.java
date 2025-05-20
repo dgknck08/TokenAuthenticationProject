@@ -57,10 +57,16 @@ public class ProfileService {
         dto.setId(user.getId());
         dto.setUsername(user.getUsername());
         dto.setEmail(user.getEmail());
-        dto.setRole(user.getRoles().stream().findFirst().orElse("NO_ROLE"));
+        String roleName = user.getRoles().stream()
+                              .map(role -> role.name(	)) // Role -> String
+                              .findFirst()
+                              .orElse("NO_ROLE");
+        dto.setRole(roleName);
         dto.setFirstName(user.getFirstName());
         dto.setLastName(user.getLastName());
         return dto;
     }
+
+
 }
 

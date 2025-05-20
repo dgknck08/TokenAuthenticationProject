@@ -4,16 +4,14 @@ public class RegisterRequest {
     private String username;
     private String email;
     private String password;
-    private String firstName;  // eklendi
-    private String lastName;   // eklendi
-
-    // getter ve setterlar...
+    private String firstName;  
+    private String lastName;   
     
     public String getFirstName() {
         return firstName;
     }
     public String getUsername() {
-		return username;
+		return username;	
 	}
 	public void setUsername(String username) {
 		this.username = username;

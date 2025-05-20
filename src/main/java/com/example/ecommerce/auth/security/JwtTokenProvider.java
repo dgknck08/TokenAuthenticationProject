@@ -10,6 +10,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 
+import com.example.ecommerce.auth.exception.JwtValidationException;
+
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -35,12 +37,10 @@ public class JwtTokenProvider {
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
-    
+
     public String generateTokenWithUsername(String username) {
         return generateTokenWithUsername(username, new ArrayList<>());
     }
-
-  
 
     public String generateTokenWithUsername(String username, List<String> roles) {
         return Jwts.builder()
@@ -82,11 +82,11 @@ public class JwtTokenProvider {
                 .build()
                 .parseClaimsJws(token);
             return true;
-        } catch (ExpiredJwtException e) {
-            throw e;
-        } catch (JwtException e) {
-            throw new IllegalArgumentException("Invalid JWT token");
+        } catch (ExpiredJwtException ex) {
+            throw new JwtValidationException("JWT token expired", ex);
+        } catch (JwtException | IllegalArgumentException ex) {
+            throw new JwtValidationException("Invalid JWT token", ex);
         }
     }
-}
 
+}

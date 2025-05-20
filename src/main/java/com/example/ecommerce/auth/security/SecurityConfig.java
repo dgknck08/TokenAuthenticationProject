@@ -2,6 +2,7 @@ package com.example.ecommerce.auth.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -39,11 +40,14 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .exceptionHandling(exception -> exception
-                .authenticationEntryPoint(jwtAuthenticationEntryPoint)  // JWT hatalarında 401 dönmek için
+                .authenticationEntryPoint(jwtAuthenticationEntryPoint)
             )
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()    // Auth işlemleri açık
-                .anyRequest().authenticated()                    // Diğer tüm endpoint’ler token ister
+                .requestMatchers("/api/auth/**").permitAll()  // login/register açık
+                .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()  // ürünleri herkes görebilir
+                .requestMatchers("/api/admin/products/**").hasRole("ADMIN")  // ürün yönetimi sadece ADMIN
+                .requestMatchers("/api/profile/**").authenticated()  // profil işlemleri loginli
+                .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);

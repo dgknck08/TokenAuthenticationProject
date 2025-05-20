@@ -16,6 +16,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
 
+    // Constructor injection
     public ProductService(ProductRepository productRepository) {
         this.productRepository = productRepository;
     }
@@ -23,13 +24,25 @@ public class ProductService {
     public List<ProductDto> getAllProducts() {
         List<Product> products = productRepository.findAll();
         return products.stream()
-                       .map(ProductMapper::toDto)
-                       .collect(Collectors.toList());
+                .map(ProductMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     public ProductDto getProductById(Long id) {
         Product product = productRepository.findById(id)
-            .orElseThrow(() -> new ProductNotFoundException("Product not found with id " + id));
+                .orElseThrow(() -> new ProductNotFoundException("Product not found with id " + id));
         return ProductMapper.toDto(product);
+    }
+
+    public ProductDto createProduct(ProductDto productDto) {
+        Product product = ProductMapper.toEntity(productDto);
+        Product savedProduct = productRepository.save(product);
+        return ProductMapper.toDto(savedProduct);
+    }
+
+    public void deleteProduct(Long id) {
+        Product product = productRepository.findById(id)
+            .orElseThrow(() -> new ProductNotFoundException("Product not found with id " + id));
+        productRepository.delete(product);
     }
 }

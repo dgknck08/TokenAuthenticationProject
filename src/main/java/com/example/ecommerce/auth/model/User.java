@@ -1,10 +1,14 @@
 package com.example.ecommerce.auth.model;
 
 import jakarta.persistence.*;
+
 import lombok.*;
 
 import java.util.HashSet;
 import java.util.Set;
+
+import com.example.ecommerce.auth.enums.Role;
+import com.example.ecommerce.cart.model.Cart;
 
 @Entity
 @Table(name = "users")
@@ -27,16 +31,20 @@ public class User {
     @Column(unique = true)
     private String email;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Cart cart;
+    
     private String firstName;
     private String lastName;
 
     private boolean enabled = true;
 
-    // Roller
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "role")
-    private Set<String> roles = new HashSet<>();
+    @Enumerated(EnumType.STRING)
+    private Set<Role> roles = new HashSet<>();
+
 
 	public String getUsername() {
 		return username;
@@ -94,13 +102,6 @@ public class User {
 		this.enabled = enabled;
 	}
 
-	public Set<String> getRoles() {
-		return roles;
-	}
-
-	public void setRoles(Set<String> roles) {
-		this.roles = roles;
-	}
-    
+	
     
 }
