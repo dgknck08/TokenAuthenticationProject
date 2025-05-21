@@ -18,32 +18,35 @@ import com.example.ecommerce.cart.model.Cart;
 @Builder
 public class User {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	  @Id
+	    @GeneratedValue(strategy = GenerationType.IDENTITY)
+	    private Long id;
 
-    @Column(unique = true, nullable = false)
-    private String username;
+	    @Column(unique = true, nullable = false)
+	    private String username;
 
-    @Column(nullable = false)
-    private String password;
+	    @Column(nullable = false)
+	    private String password;
 
-    @Column(unique = true)
-    private String email;
+	    @Column(unique = true)
+	    private String email;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private Cart cart;
-    
-    private String firstName;
-    private String lastName;
+	    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	    private Cart cart;
 
-    private boolean enabled = true;
+	    private String firstName;
+	    private String lastName;
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
-    @Column(name = "role")
-    @Enumerated(EnumType.STRING)
-    private Set<Role> roles = new HashSet<>();
+	    @Builder.Default
+	    private boolean enabled = true;
+
+	    @ElementCollection(fetch = FetchType.EAGER)
+	    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
+	    @Column(name = "role")
+	    @Enumerated(EnumType.STRING)
+	    @Builder.Default
+	    private Set<Role> roles = new HashSet<>();
+
 
 
 	public String getUsername() {

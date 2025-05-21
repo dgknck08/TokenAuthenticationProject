@@ -26,6 +26,12 @@ public class TestDataLoader implements CommandLineRunner {
     public void run(String... args) throws Exception {
         if (userRepository.findByUsername("testuser").isEmpty()) {
           
+        	 String encodedPassword = passwordEncoder.encode("123456");
+             System.out.println("Encoded Password: " + encodedPassword);
+
+             // refreshTokenRepository ile bir işlem örneği:
+             long count = refreshTokenRepository.count();
+             System.out.println("Refresh Token count: " + count);
        
         }
     }
