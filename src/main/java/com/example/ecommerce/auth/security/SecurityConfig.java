@@ -1,7 +1,10 @@
 package com.example.ecommerce.auth.security;
 
+import java.util.Arrays;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -21,14 +24,15 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
-
+    private final Environment env; 
     public SecurityConfig(CustomUserDetailsService userDetailsService,
                           JwtTokenProvider jwtTokenProvider,
-                          JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
+                          JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint, Environment env) {
         this.userDetailsService = userDetailsService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
-    }
+        this.env=env;
+    }	
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
@@ -42,13 +46,24 @@ public class SecurityConfig {
             .exceptionHandling(exception -> exception
                 .authenticationEntryPoint(jwtAuthenticationEntryPoint)
             )
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()  // login/register açık
-                .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()  // ürünleri herkes görebilir
-                .requestMatchers("/api/admin/products/**").hasRole("ADMIN")  // ürün yönetimi sadece ADMIN
-                .requestMatchers("/api/profile/**").authenticated()  // profil işlemleri loginli
-                .anyRequest().authenticated()
-            )
+            .authorizeHttpRequests(auth -> {
+                // Sadece "dev" profilindeyse Swagger'a izin veriliyor.
+                if (Arrays.asList(env.getActiveProfiles()).contains("dev")) {
+                    auth.requestMatchers(
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**",
+                        "/swagger-ui.html",
+                        "/webjars/**"
+                    ).permitAll();
+                }
+
+                auth
+                    .requestMatchers("/api/auth/**").permitAll()  // login/register açık
+                    .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()  // ürünleri herkes görebilir
+                    .requestMatchers("/api/admin/products/**").hasRole("ADMIN")  // ürün yönetimi sadece ADMIN
+                    .requestMatchers("/api/profile/**").authenticated()  // profil işlemleri loginli
+                    .anyRequest().authenticated();
+            })
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
