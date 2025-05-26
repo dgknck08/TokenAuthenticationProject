@@ -1,11 +1,14 @@
 package com.example.ecommerce.auth.service;
 
 import com.example.ecommerce.auth.dto.*;
+
 import com.example.ecommerce.auth.exception.InvalidCredentialsException;
 import com.example.ecommerce.auth.exception.UserAlreadyExistsException;
 import com.example.ecommerce.auth.exception.UserNotFoundException;
 import com.example.ecommerce.auth.model.User;
 import com.example.ecommerce.auth.security.JwtTokenProvider;
+
+import jakarta.transaction.Transactional;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -31,10 +34,9 @@ public class AuthService {
         this.authenticationManager = authenticationManager;
     }
 
+    @Transactional
     public RegisterResponse register(RegisterRequest request) {
-        if (userService.findByUsername(request.getUsername()).isPresent()) {
-            throw new UserAlreadyExistsException("Kullanıcı zaten kayıtlı");
-        }
+        validateRegisterRequest(request);
 
         User user = userService.createUser(request);
 
@@ -43,6 +45,7 @@ public class AuthService {
 
         return new RegisterResponse(accessToken, refreshToken, user.getUsername(), user.getEmail());
     }
+
 
     public LoginResponse login(LoginRequest request) {
         try {
@@ -53,7 +56,7 @@ public class AuthService {
             String accessToken = jwtTokenProvider.generateToken(authentication);
 
             User user = userService.findByUsername(request.getUsername())
-                                   .orElseThrow(() -> new UserNotFoundException("User not found"));
+                                   .orElseThrow(() -> new InvalidCredentialsException("Invalid username or password"));
 
             String refreshToken = refreshTokenService.createRefreshToken(user.getId()).getToken();
 
@@ -63,6 +66,8 @@ public class AuthService {
         }
     }
 
+
+
     public RefreshTokenResponse refreshToken(String refreshToken) {
         String username = refreshTokenService.validateRefreshToken(refreshToken);
         User user = userService.findByUsername(username)
@@ -70,4 +75,17 @@ public class AuthService {
         String accessToken = jwtTokenProvider.generateTokenWithUsername(username);
         return new RefreshTokenResponse(accessToken, refreshToken, user.getUsername(), user.getEmail());
     }
+    
+    private void validateRegisterRequest(RegisterRequest request) {
+        if (userService.findByUsername(request.getUsername()).isPresent()) {
+            throw new UserAlreadyExistsException("Username is already taken");
+        }
+
+        if (userService.findByEmail(request.getEmail()).isPresent()) {
+            throw new UserAlreadyExistsException("Email is already registered");
+        }
+    }
+    
+
+    
 }

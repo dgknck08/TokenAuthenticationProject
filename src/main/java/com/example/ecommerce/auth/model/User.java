@@ -18,7 +18,7 @@ import com.example.ecommerce.cart.model.Cart;
 @Builder
 public class User {
 
-	  @Id
+	  	@Id
 	    @GeneratedValue(strategy = GenerationType.IDENTITY)
 	    private Long id;
 
@@ -46,6 +46,9 @@ public class User {
 	    @Enumerated(EnumType.STRING)
 	    @Builder.Default
 	    private Set<Role> roles = new HashSet<>();
+	    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	    private RefreshToken refreshToken;
+
 
 
 

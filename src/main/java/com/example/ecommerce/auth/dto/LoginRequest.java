@@ -1,8 +1,15 @@
 package com.example.ecommerce.auth.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
+
+@AllArgsConstructor
 public class LoginRequest {
-    private String username;
-    private String password;
+	@NotBlank(message = "Username cannot be empty")
+	private String username;
+
+	@NotBlank(message = "Password cannot be empty")
+	private String password;
     
     
 	public String getPassword() {

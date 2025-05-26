@@ -1,6 +1,7 @@
 package com.example.ecommerce.auth.security;
 
 import io.jsonwebtoken.*;
+
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -65,6 +66,7 @@ public class JwtTokenProvider {
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
     }
+
 
     public String getUsernameFromToken(String token) {
         return Jwts.parserBuilder()

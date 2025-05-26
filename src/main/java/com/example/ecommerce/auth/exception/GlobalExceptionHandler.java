@@ -2,6 +2,7 @@ package com.example.ecommerce.auth.exception;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -54,6 +55,13 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.UNAUTHORIZED, "Geçersiz veya süresi dolmuş token.");
     }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        logger.warn("DataIntegrityViolationException: {}", ex.getMessage());
+        return buildResponse(HttpStatus.CONFLICT, "Veritabanı bütünlüğü ihlali: Muhtemelen kullanıcı zaten mevcut.");
+    }
+
+    
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
         logger.error("Unexpected exception", ex);

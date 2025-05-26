@@ -1,5 +1,8 @@
 package com.example.ecommerce.auth.dto;
 
+import lombok.AllArgsConstructor;
+
+@AllArgsConstructor
 public class RegisterRequest {
     private String username;
     private String email;

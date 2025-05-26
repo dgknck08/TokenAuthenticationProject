@@ -12,4 +12,7 @@ public interface UserService {
     User save(User user);
     User getUserById(Long id);
     User createUser(RegisterRequest request);
+    
+    Optional<User> findByEmail(String email);
+
 }

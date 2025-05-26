@@ -1,6 +1,7 @@
 package com.example.ecommerce.auth.service.impl;
 
 import com.example.ecommerce.auth.dto.RegisterRequest;
+import com.example.ecommerce.auth.enums.Role;
 import com.example.ecommerce.auth.model.User;
 import com.example.ecommerce.auth.repository.UserRepository;
 import com.example.ecommerce.auth.service.UserService;
@@ -9,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -29,6 +31,7 @@ public class UserServiceImpl implements UserService {
         user.setEmail(request.getEmail());
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
+        user.setRoles(Set.of(Role.ROLE_USER));
 
         return userRepository.save(user);
     }
@@ -52,5 +55,12 @@ public class UserServiceImpl implements UserService {
     public User save(User user) {
         return userRepository.save(user);
     }
+
+    @Override
+    public Optional<User> findByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+
 }
+
 
