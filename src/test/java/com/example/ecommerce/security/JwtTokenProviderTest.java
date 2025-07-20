@@ -97,7 +97,7 @@ class JwtTokenProviderTest {
     
     @Test
     public void testValidateToken_expiredToken_throwsJwtValidationException() throws InterruptedException {
-        // Çok kısa süreli token oluşturuyoruz (1 saniye)
+        // Çok kısa süreli token 
         JwtTokenProvider shortLivedProvider = new JwtTokenProvider(
                 Mockito.mock(UserDetailsService.class),
                 "1234567890123456789012345678901234567890123456789012345678901234",
@@ -112,10 +112,10 @@ class JwtTokenProviderTest {
 
         String token = shortLivedProvider.generateToken(authentication);
 
-        // Token'ın süresi dolması için 2 saniye bekle
+        // Token'ın süresi doluyor.
         Thread.sleep(2000);
 
-        // ExpiredJwtException atmalı, biz de bizim özel exception'ımızı kontrol edeceğiz
+        // ExpiredJwtException 
         JwtValidationException exception = assertThrows(JwtValidationException.class, () -> {
             shortLivedProvider.validateToken(token);
         });
