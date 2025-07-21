@@ -1,77 +1,39 @@
 package com.example.ecommerce.auth.model;
 
 import java.time.Instant;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.*;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 
 @Entity
+@Table(name = "refresh_tokens", indexes = @Index(name = "idx_token", columnList = "token"))
+@Data
 @NoArgsConstructor
+@AllArgsConstructor
 public class RefreshToken {
-
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-   
 
     @Column(unique = true, nullable = false)
     private String token;
 
-
-    private Instant expiryDate;	
+    @Column(nullable = false)
+    private Instant expiryDate;
 
     @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
     private User user;
-    
-    public RefreshToken(String token) {
-        this.token = token;
-    }
+
     public RefreshToken(String token, User user, Instant expiryDate) {
         this.token = token;
         this.user = user;
         this.expiryDate = expiryDate;
     }
+
     public boolean isExpired() {
-        return expiryDate.isBefore(Instant.now());
-    }
-
-    
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
-    }
-
-    public Instant getExpiryDate() {
-        return expiryDate;
-    }
-
-    public void setExpiryDate(Instant expiryDate) {
-        this.expiryDate = expiryDate;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
+        return expiryDate != null && expiryDate.isBefore(Instant.now());
     }
 }

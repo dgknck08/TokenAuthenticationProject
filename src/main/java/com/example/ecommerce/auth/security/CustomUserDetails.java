@@ -6,17 +6,13 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.*;
+import java.util.Collection;
 import java.util.stream.Collectors;
 
 @AllArgsConstructor
 public class CustomUserDetails implements UserDetails {
-	
 
-	private static final long serialVersionUID = 1L;
-
-
-
+    private static final long serialVersionUID = 1L;
     private final User user;
 
     @Override
@@ -26,7 +22,6 @@ public class CustomUserDetails implements UserDetails {
                    .map(role -> new SimpleGrantedAuthority(role.name()))
                    .collect(Collectors.toList());
     }
-
 
     @Override
     public String getPassword() {
@@ -56,5 +51,9 @@ public class CustomUserDetails implements UserDetails {
     @Override
     public boolean isEnabled() {
         return user.isEnabled();
+    }
+
+    public User getUser() {
+        return user;
     }
 }

@@ -1,7 +1,6 @@
 package com.example.ecommerce.auth.security;
 
 import java.io.IOException;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,9 +19,11 @@ import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.SignatureException;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-
+    
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
-
+    private static final String BEARER_PREFIX = "Bearer ";
+    private static final String AUTHORIZATION_HEADER = "Authorization";
+    
     private final JwtTokenProvider jwtTokenProvider;
 
     public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
@@ -30,12 +31,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
-    public void doFilterInternal(HttpServletRequest request,
-                                 HttpServletResponse response,
-                                 FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
         try {
             String token = getJwtFromRequest(request);
-
+            
             if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
                 Authentication auth = jwtTokenProvider.getAuthentication(token);
                 SecurityContextHolder.getContext().setAuthentication(auth);
@@ -53,19 +54,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "JWT processing error");
             return;
         } catch (RuntimeException e) {
-            logger.error("Unexpected error in JWT filter", e.getMessage());
+            logger.error("Unexpected error in JWT filter: {}", e.getMessage());
             sendErrorResponse(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Internal server error");
             return;
         }
-
+        
         filterChain.doFilter(request, response);
     }
 
-
     private String getJwtFromRequest(HttpServletRequest request) {
-        String bearerToken = request.getHeader("Authorization");
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring("Bearer ".length());
+        String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
+        
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
+            return bearerToken.substring(BEARER_PREFIX.length());
         }
         return null;
     }
@@ -73,6 +74,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private void sendErrorResponse(HttpServletResponse response, int status, String message) throws IOException {
         response.setStatus(status);
         response.setContentType("application/json;charset=UTF-8");
+        
         String json = String.format("{\"error\": \"%s\"}", message);
         response.getWriter().write(json);
     }
