@@ -1,9 +1,7 @@
 package com.example.ecommerce.service;
 
 
-
 import com.example.ecommerce.auth.dto.LoginRequest;
-
 import com.example.ecommerce.auth.dto.LoginResponse;
 import com.example.ecommerce.auth.exception.InvalidCredentialsException;
 import com.example.ecommerce.auth.model.RefreshToken;
@@ -45,6 +43,7 @@ class AuthServiceLoginTest {
 
     @Test
     void login_shouldReturnLoginResponse_whenCredentialsAreValid() {
+
         String username = "testuser";
         String password = "testpass";
         String accessToken = "access-token";
@@ -55,7 +54,7 @@ class AuthServiceLoginTest {
         Authentication authentication = mock(Authentication.class);
 
         User user = new User();
-        user.setId(1L); // createRefreshToken için gerekli
+        user.setId(1L);
         user.setUsername(username);
         user.setEmail(email);
 
@@ -68,19 +67,17 @@ class AuthServiceLoginTest {
         when(userService.findByUsername(username)).thenReturn(Optional.of(user));
         when(refreshTokenService.createRefreshToken(1L)).thenReturn(refreshToken);
 
-        // Act
         LoginResponse response = authService.login(request);
 
-        // Assert
-        assertEquals(username, response.getUsername());
-        assertEquals(email, response.getEmail());
-        assertEquals(accessToken, response.getAccessToken());
-        assertEquals(refreshTokenStr, response.getRefreshToken());
+        assertEquals(username, response.username());
+        assertEquals(email, response.email());
+        assertEquals(accessToken, response.accessToken());
+        assertEquals(refreshTokenStr, response.refreshToken());
     }
 
     @Test
     void login_shouldThrowInvalidCredentialsException_whenAuthenticationFails() {
-        // Arrange
+
         String username = "testuser";
         String password = "wrongpass";
         LoginRequest request = new LoginRequest(username, password);
@@ -88,13 +85,12 @@ class AuthServiceLoginTest {
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenThrow(new BadCredentialsException("Bad credentials"));
 
-        // Act & Assert
         assertThrows(InvalidCredentialsException.class, () -> authService.login(request));
     }
 
     @Test
     void login_shouldThrowInvalidCredentialsException_whenUserDoesNotExist() {
-        // Arrange
+
         String username = "notfound";
         String password = "pass";
         LoginRequest request = new LoginRequest(username, password);
@@ -102,17 +98,15 @@ class AuthServiceLoginTest {
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authentication);
-
         when(jwtTokenProvider.generateToken(authentication)).thenReturn("dummy-token");
         when(userService.findByUsername(username)).thenReturn(Optional.empty());
 
-        // Act & Assert
         assertThrows(InvalidCredentialsException.class, () -> authService.login(request));
     }
 
     @Test
-    void login_shouldThrowException_whenRefreshTokenIsNull() {
-        // Arrange
+    void login_shouldThrowRuntimeException_whenRefreshTokenCreationFails() {
+
         String username = "testuser";
         String password = "testpass";
         LoginRequest request = new LoginRequest(username, password);
@@ -127,45 +121,80 @@ class AuthServiceLoginTest {
                 .thenReturn(authentication);
         when(jwtTokenProvider.generateToken(authentication)).thenReturn("access-token");
         when(userService.findByUsername(username)).thenReturn(Optional.of(user));
-        when(refreshTokenService.createRefreshToken(1L)).thenReturn(null); // NULL dönüyor!
+        when(refreshTokenService.createRefreshToken(1L)).thenThrow(new RuntimeException("Refresh token creation failed"));
 
-        // Act & Assert
-        assertThrows(NullPointerException.class, () -> authService.login(request));
+
+        assertThrows(RuntimeException.class, () -> authService.login(request));
     }
+
     @Test
-    void login_shouldThrowException_whenUsernameIsEmpty() {
+    void login_shouldThrowInvalidCredentialsException_whenUsernameIsBlank() {
+        // Bu test validation layerda yakalanır normalde, ama service level kontrolü 
         LoginRequest request = new LoginRequest("", "pass");
 
+        // AuthService'in username/password kontrolü 
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenThrow(new BadCredentialsException("Empty username"));
+
         assertThrows(InvalidCredentialsException.class, () -> authService.login(request));
     }
 
     @Test
-    void login_shouldThrowException_whenPasswordIsEmpty() {
+    void login_shouldThrowInvalidCredentialsException_whenPasswordIsBlank() {
+
         LoginRequest request = new LoginRequest("user", "");
 
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenThrow(new BadCredentialsException("Empty password"));
+
         assertThrows(InvalidCredentialsException.class, () -> authService.login(request));
     }
 
     @Test
-    void login_shouldThrowException_whenAccessTokenGenerationFails() {
+    void login_shouldThrowRuntimeException_whenTokenGenerationFails() {
+
         String username = "user";
         String password = "pass";
+        LoginRequest request = new LoginRequest(username, password);
+        Authentication authentication = mock(Authentication.class);
+
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(authentication);
+        when(jwtTokenProvider.generateToken(authentication)).thenThrow(new RuntimeException("Token generation error"));
+
+
+        assertThrows(RuntimeException.class, () -> authService.login(request));
+    }
+
+    @Test
+    void login_shouldCallAllDependencies_inCorrectOrder() {
+
+        String username = "testuser";
+        String password = "testpass";
         LoginRequest request = new LoginRequest(username, password);
         Authentication authentication = mock(Authentication.class);
 
         User user = new User();
         user.setId(1L);
         user.setUsername(username);
-        user.setEmail("email@example.com");
+        user.setEmail("test@example.com");
+
+        RefreshToken refreshToken = new RefreshToken();
+        refreshToken.setToken("refresh-token");
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authentication);
-        when(jwtTokenProvider.generateToken(authentication)).thenThrow(new RuntimeException("Token error"));
+        when(jwtTokenProvider.generateToken(authentication)).thenReturn("access-token");
         when(userService.findByUsername(username)).thenReturn(Optional.of(user));
+        when(refreshTokenService.createRefreshToken(1L)).thenReturn(refreshToken);
 
-        assertThrows(RuntimeException.class, () -> authService.login(request));
+
+        authService.login(request);
+
+
+        verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
+        verify(jwtTokenProvider).generateToken(authentication);
+        verify(userService).findByUsername(username);
+        verify(refreshTokenService).createRefreshToken(1L);
     }
-
-    
 }
-

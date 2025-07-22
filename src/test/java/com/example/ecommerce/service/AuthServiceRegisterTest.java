@@ -1,5 +1,6 @@
 package com.example.ecommerce.service;
 
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -26,96 +27,177 @@ import com.example.ecommerce.auth.service.UserService;
 
 public class AuthServiceRegisterTest {
 
-		private UserService userService;
-	    private JwtTokenProvider jwtTokenProvider;
-	    private RefreshTokenService refreshTokenService;
-	    private AuthenticationManager authenticationManager;
-	    private AuthService authService;
-	
-	    @BeforeEach
-	    void setUp() {
-	        userService = mock(UserService.class);
-	        jwtTokenProvider = mock(JwtTokenProvider.class);
-	        refreshTokenService = mock(RefreshTokenService.class);
-	        authenticationManager = mock(AuthenticationManager.class);
-	
-	        authService = new AuthService(userService, jwtTokenProvider, refreshTokenService, authenticationManager);
-	    }
-	    
-	    
-	    @Test
-	    public void register_ShouldReturnRegisterResponse_whenCredentialsAreValid() {
-	    	String username = "testuser1";
-	        String password = "testpassword";
-	        String firstName = "test";
-	        String lastName = "user";
-	        String email = "test@example.com"; 
-	    	
-	        RegisterRequest registerRequest = new RegisterRequest(username,
-	        		password,
-	        		firstName,
-	        		lastName
-	        		,email);
-	        
-	        User mockUser = new User();
-	        mockUser.setId(1L);
-	        mockUser.setUsername(username);
-	        mockUser.setEmail(email);
-	        
-	        String fakeAccessToken = "access-token";
-	        String fakeRefreshToken = "refresh-token";
-	        // mocklama
-	        when(userService.findByUsername(username)).thenReturn(Optional.empty());
-	        when(userService.findByEmail(email)).thenReturn(Optional.empty());
-	        when(userService.createUser(registerRequest)).thenReturn(mockUser);
-	        when(jwtTokenProvider.generateTokenWithUsername(username)).thenReturn(fakeAccessToken);
-	        when(refreshTokenService.createRefreshToken(mockUser.getId()))
-	            .thenReturn(new RefreshToken(fakeRefreshToken));
-	        
-	        RegisterResponse response = authService.register(registerRequest);
+    private UserService userService;
+    private JwtTokenProvider jwtTokenProvider;
+    private RefreshTokenService refreshTokenService;
+    private AuthenticationManager authenticationManager;
+    private AuthService authService;
 
-	        // Assert
-	        assertEquals(username, response.getUsername());
-	        assertEquals(email, response.getEmail());
-	        assertEquals(fakeAccessToken, response.getAccessToken());
-	        assertEquals(fakeRefreshToken, response.getRefreshToken());
-	        
-	    }
-	    @Test
-	    void register_ShouldThrowException_whenUsernameAlreadyExists() {
-	        // Arrange
-	        RegisterRequest request = new RegisterRequest("existinguser", "pass", "Test", "User", "new@example.com");
+    @BeforeEach
+    void setUp() {
+        userService = mock(UserService.class);
+        jwtTokenProvider = mock(JwtTokenProvider.class);
+        refreshTokenService = mock(RefreshTokenService.class);
+        authenticationManager = mock(AuthenticationManager.class);
 
-	        when(userService.findByUsername("existinguser")).thenReturn(Optional.of(new User()));
+        authService = new AuthService(userService, jwtTokenProvider, refreshTokenService, authenticationManager);
+    }
 
-	        // Act + Assert
-	        assertThrows(UserAlreadyExistsException.class, () -> authService.register(request));
+    @Test
+    public void register_ShouldReturnRegisterResponse_whenCredentialsAreValid() {
 
-	        verify(userService).findByUsername("existinguser");
-	        verify(userService, never()).createUser(any());
-	    }
-	    
-	  
-	   
+        String username = "testuser1";
+        String email = "test@example.com";
+        String password = "testpassword";
+        String firstName = "test";
+        String lastName = "user";
 
-	    @Test
-	    void register_ShouldThrowException_WhenEmailExists() {
-	        // arrange
-	        RegisterRequest request = new RegisterRequest("newuser", "used@example.com", "password", "ahmet", "hamdi");
-	        when(userService.findByUsername("newuser")).thenReturn(Optional.empty());
-	        when(userService.findByEmail("used@example.com")).thenReturn(Optional.of(new User()));
+        RegisterRequest registerRequest = new RegisterRequest(username, email, password, firstName, lastName);
 
-	        // act & assert
-	        UserAlreadyExistsException exception = assertThrows(
-	            UserAlreadyExistsException.class,
-	            () -> authService.register(request)
-	        );
+        User mockUser = new User();
+        mockUser.setId(1L);
+        mockUser.setUsername(username);
+        mockUser.setEmail(email);
 
-	        assertEquals("Email is already registered", exception.getMessage());
-	        verify(userService, never()).createUser(any());
-	    }
+        String fakeAccessToken = "access-token";
+        String fakeRefreshToken = "refresh-token";
 
-	
-	
+        RefreshToken refreshToken = new RefreshToken();
+        refreshToken.setToken(fakeRefreshToken);
 
+
+        when(userService.findByUsername(username)).thenReturn(Optional.empty());
+        when(userService.findByEmail(email)).thenReturn(Optional.empty());
+        when(userService.createUser(registerRequest)).thenReturn(mockUser);
+        when(jwtTokenProvider.generateTokenWithUsername(username)).thenReturn(fakeAccessToken);
+        when(refreshTokenService.createRefreshToken(mockUser.getId())).thenReturn(refreshToken);
+
+
+        RegisterResponse response = authService.register(registerRequest);
+
+
+        assertEquals(username, response.username());
+        assertEquals(email, response.email());
+        assertEquals(fakeAccessToken, response.accessToken());
+        assertEquals(fakeRefreshToken, response.refreshToken());
+    }
+
+    @Test
+    void register_ShouldThrowException_whenUsernameAlreadyExists() {
+
+        RegisterRequest request = new RegisterRequest("existinguser", "new@example.com", "pass", "Test", "User");
+
+        when(userService.findByUsername("existinguser")).thenReturn(Optional.of(new User()));
+
+
+        UserAlreadyExistsException exception = assertThrows(
+            UserAlreadyExistsException.class, 
+            () -> authService.register(request)
+        );
+
+        assertEquals("Username is already taken", exception.getMessage());
+        verify(userService).findByUsername("existinguser");
+        verify(userService, never()).createUser(any());
+    }
+
+    @Test
+    void register_ShouldThrowException_WhenEmailExists() {
+
+        RegisterRequest request = new RegisterRequest("newuser", "used@example.com", "password", "ahmet", "hamdi");
+        
+        when(userService.findByUsername("newuser")).thenReturn(Optional.empty());
+        when(userService.findByEmail("used@example.com")).thenReturn(Optional.of(new User()));
+
+        UserAlreadyExistsException exception = assertThrows(
+            UserAlreadyExistsException.class,
+            () -> authService.register(request)
+        );
+
+        assertEquals("Email is already registered", exception.getMessage());
+        verify(userService).findByUsername("newuser");
+        verify(userService).findByEmail("used@example.com");
+        verify(userService, never()).createUser(any());
+    }
+
+    @Test
+    void register_ShouldThrowException_whenUserCreationFails() {
+
+        RegisterRequest request = new RegisterRequest("newuser", "new@example.com", "password", "Test", "User");
+
+        when(userService.findByUsername("newuser")).thenReturn(Optional.empty());
+        when(userService.findByEmail("new@example.com")).thenReturn(Optional.empty());
+        when(userService.createUser(request)).thenThrow(new RuntimeException("Database error"));
+
+        assertThrows(RuntimeException.class, () -> authService.register(request));
+        verify(userService).createUser(request);
+    }
+
+    @Test
+    void register_ShouldThrowException_whenTokenGenerationFails() {
+
+        RegisterRequest request = new RegisterRequest("newuser", "new@example.com", "password", "Test", "User");
+        
+        User mockUser = new User();
+        mockUser.setId(1L);
+        mockUser.setUsername("newuser");
+        mockUser.setEmail("new@example.com");
+
+        when(userService.findByUsername("newuser")).thenReturn(Optional.empty());
+        when(userService.findByEmail("new@example.com")).thenReturn(Optional.empty());
+        when(userService.createUser(request)).thenReturn(mockUser);
+        when(jwtTokenProvider.generateTokenWithUsername("newuser")).thenThrow(new RuntimeException("Token generation failed"));
+
+        // Act & Assert
+        assertThrows(RuntimeException.class, () -> authService.register(request));
+    }
+
+    @Test
+    void register_ShouldThrowException_whenRefreshTokenCreationFails() {
+
+    	RegisterRequest request = new RegisterRequest("newuser", "new@example.com", "password", "Test", "User");
+        
+        User mockUser = new User();
+        mockUser.setId(1L);
+        mockUser.setUsername("newuser");
+        mockUser.setEmail("new@example.com");
+
+        when(userService.findByUsername("newuser")).thenReturn(Optional.empty());
+        when(userService.findByEmail("new@example.com")).thenReturn(Optional.empty());
+        when(userService.createUser(request)).thenReturn(mockUser);
+        when(jwtTokenProvider.generateTokenWithUsername("newuser")).thenReturn("access-token");
+        when(refreshTokenService.createRefreshToken(1L)).thenThrow(new RuntimeException("Refresh token creation failed"));
+
+
+        assertThrows(RuntimeException.class, () -> authService.register(request));
+    }
+
+    @Test
+    void register_ShouldCallAllDependencies_inCorrectOrder() {
+
+        RegisterRequest request = new RegisterRequest("newuser", "new@example.com", "password", "Test", "User");
+        
+        User mockUser = new User();
+        mockUser.setId(1L);
+        mockUser.setUsername("newuser");
+        mockUser.setEmail("new@example.com");
+
+        RefreshToken refreshToken = new RefreshToken();
+        refreshToken.setToken("refresh-token");
+
+        when(userService.findByUsername("newuser")).thenReturn(Optional.empty());
+        when(userService.findByEmail("new@example.com")).thenReturn(Optional.empty());
+        when(userService.createUser(request)).thenReturn(mockUser);
+        when(jwtTokenProvider.generateTokenWithUsername("newuser")).thenReturn("access-token");
+        when(refreshTokenService.createRefreshToken(1L)).thenReturn(refreshToken);
+
+
+        authService.register(request);
+
+
+        verify(userService).findByUsername("newuser");
+        verify(userService).findByEmail("new@example.com");
+        verify(userService).createUser(request);
+        verify(jwtTokenProvider).generateTokenWithUsername("newuser");
+        verify(refreshTokenService).createRefreshToken(1L);
+    }
 }
