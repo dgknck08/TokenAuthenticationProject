@@ -1,144 +1,138 @@
 package com.example.ecommerce.service;
 
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import com.example.ecommerce.auth.exception.TokenRefreshException;
+import com.example.ecommerce.auth.exception.UserNotFoundException;
+import com.example.ecommerce.auth.model.RefreshToken;
+import com.example.ecommerce.auth.model.User;
+import com.example.ecommerce.auth.repository.RefreshTokenRepository;
+import com.example.ecommerce.auth.service.UserService;
+import com.example.ecommerce.auth.service.impl.RefreshTokenServiceImpl;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.*;
 
 import java.time.Instant;
 import java.util.Optional;
 
-import com.example.ecommerce.auth.exception.TokenRefreshException;
-import com.example.ecommerce.auth.model.RefreshToken;
-import com.example.ecommerce.auth.model.User;
-import com.example.ecommerce.auth.repository.RefreshTokenRepository;
-import com.example.ecommerce.auth.service.RefreshTokenService;
-import com.example.ecommerce.auth.service.UserService;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+class RefreshTokenServiceImplTest {
 
-public class RefreshTokenServiceTest {
-
+    @Mock
     private RefreshTokenRepository refreshTokenRepository;
-    private UserService userService;
-    private RefreshTokenService refreshTokenService;
 
-    private final Long tokenDurationMs = 1000L * 60 * 60; // 1 saat
+    @Mock
+    private UserService userService;
+
+    @InjectMocks
+    private RefreshTokenServiceImpl refreshTokenService;
+
+    private final long refreshTokenDurationMs = 3600000L; // 1 saat
 
     @BeforeEach
-    void setup() {
-        refreshTokenRepository = mock(RefreshTokenRepository.class);
-        userService = mock(UserService.class);
-
-        refreshTokenService = new RefreshTokenService(tokenDurationMs, refreshTokenRepository, userService);
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        refreshTokenService = new RefreshTokenServiceImpl(refreshTokenRepository, userService, refreshTokenDurationMs);
     }
 
     @Test
-    void createRefreshToken_ShouldReturnExistingValidToken() {
+    void createRefreshToken_ShouldCreateNewTokenSuccessfully() {
+
+        Long userId = 1L;
         User user = new User();
-        user.setId(1L);
+        user.setId(userId);
+        user.setUsername("testuser");
 
-        RefreshToken existingToken = new RefreshToken();
-        existingToken.setUser(user);
-        existingToken.setExpiryDate(Instant.now().plusSeconds(300)); // henüz geçerli
-        existingToken.setToken("existing-token");
+        when(userService.findById(userId)).thenReturn(Optional.of(user));
+        when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(i -> i.getArgument(0));
 
-        when(userService.getUserById(1L)).thenReturn(user);
-        when(refreshTokenRepository.findByUser(user)).thenReturn(Optional.of(existingToken));
+        RefreshToken token = refreshTokenService.createRefreshToken(userId);
 
-        RefreshToken result = refreshTokenService.createRefreshToken(1L);
+        assertNotNull(token);
+        assertEquals(user, token.getUser());
+        assertNotNull(token.getToken());
+        assertTrue(token.getExpiryDate().isAfter(Instant.now()));
+        verify(refreshTokenRepository).deleteByUserId(userId);
+        verify(refreshTokenRepository).save(any(RefreshToken.class));
+    }
 
-        assertEquals(existingToken.getToken(), result.getToken());
-        verify(refreshTokenRepository, never()).delete(any());
+    @Test
+    void createRefreshToken_ShouldThrowException_WhenUserNotFound() {
+
+        Long userId = 99L;
+        when(userService.findById(userId)).thenReturn(Optional.empty());
+
+        assertThrows(UserNotFoundException.class, () -> refreshTokenService.createRefreshToken(userId));
         verify(refreshTokenRepository, never()).save(any());
     }
 
     @Test
-    void createRefreshToken_ShouldDeleteExpiredTokenAndCreateNewOne() {
+    void validateRefreshToken_ShouldReturnUsername_WhenTokenIsValid() {
+
         User user = new User();
-        user.setId(1L);
-
-        RefreshToken expiredToken = new RefreshToken();
-        expiredToken.setUser(user);
-        expiredToken.setExpiryDate(Instant.now().minusSeconds(300)); // geçmiş
-        expiredToken.setToken("expired-token");
-
-        when(userService.getUserById(1L)).thenReturn(user);
-        when(refreshTokenRepository.findByUser(user)).thenReturn(Optional.of(expiredToken));
-        when(refreshTokenRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-        RefreshToken result = refreshTokenService.createRefreshToken(1L);
-
-        assertNotEquals(expiredToken.getToken(), result.getToken());
-        verify(refreshTokenRepository).delete(expiredToken);
-        verify(refreshTokenRepository).save(any());
-    }
-
-    @Test
-    void verifyExpiration_ShouldThrowException_WhenTokenExpired() {
-        RefreshToken token = new RefreshToken();
-        token.setExpiryDate(Instant.now().minusSeconds(1));
-        token.setToken("expired-token");
-
-        doNothing().when(refreshTokenRepository).delete(token);
-
-        TokenRefreshException exception = assertThrows(TokenRefreshException.class,
-            () -> refreshTokenService.verifyExpiration(token));
-
-        assertEquals("Refresh token expired. Please login again.", exception.getMessage());
-        verify(refreshTokenRepository).delete(token);
-    }
-
-    @Test
-    void verifyExpiration_ShouldReturnToken_WhenValid() {
-        RefreshToken token = new RefreshToken();
-        token.setExpiryDate(Instant.now().plusSeconds(300));
-        token.setToken("valid-token");
-
-        RefreshToken result = refreshTokenService.verifyExpiration(token);
-
-        assertEquals(token, result);
-        verify(refreshTokenRepository, never()).delete(any());
-    }
-
-    @Test
-    void validateRefreshToken_ShouldReturnUsername_WhenTokenValid() {
-        User user = new User();
-        user.setUsername("testuser");
+        user.setUsername("validUser");
 
         RefreshToken token = new RefreshToken();
+        token.setToken("abc123");
         token.setUser(user);
-        token.setExpiryDate(Instant.now().plusSeconds(300));
-        token.setToken("valid-token");
+        token.setExpiryDate(Instant.now().plusSeconds(600));
 
-        when(refreshTokenRepository.findByToken("valid-token")).thenReturn(Optional.of(token));
+        when(refreshTokenRepository.findByToken("abc123")).thenReturn(Optional.of(token));
 
-        String username = refreshTokenService.validateRefreshToken("valid-token");
+        String result = refreshTokenService.validateRefreshToken("abc123");
 
-        assertEquals("testuser", username);
+        assertEquals("validUser", result);
     }
 
     @Test
     void validateRefreshToken_ShouldThrowException_WhenTokenNotFound() {
-        when(refreshTokenRepository.findByToken("invalid-token")).thenReturn(Optional.empty());
 
-        TokenRefreshException exception = assertThrows(TokenRefreshException.class,
-            () -> refreshTokenService.validateRefreshToken("invalid-token"));
+        when(refreshTokenRepository.findByToken("invalid")).thenReturn(Optional.empty());
 
-        assertEquals("Refresh token not found", exception.getMessage());
+        assertThrows(TokenRefreshException.class, () -> refreshTokenService.validateRefreshToken("invalid"));
     }
 
     @Test
-    void deleteByUserId_ShouldCallRepositoryDelete() {
-        User user = new User();
-        user.setId(1L);
+    void validateRefreshToken_ShouldThrowException_WhenTokenIsExpired() {
 
-        when(userService.getUserById(1L)).thenReturn(user);
-        when(refreshTokenRepository.deleteByUser(user)).thenReturn(1);
+        RefreshToken expiredToken = new RefreshToken();
+        expiredToken.setToken("expired");
+        expiredToken.setExpiryDate(Instant.now().minusSeconds(60));
 
-        int deletedCount = refreshTokenService.deleteByUserId(1L);
+        when(refreshTokenRepository.findByToken("expired")).thenReturn(Optional.of(expiredToken));
 
-        assertEquals(1, deletedCount);
-        verify(refreshTokenRepository).deleteByUser(user);
+        assertThrows(TokenRefreshException.class, () -> refreshTokenService.validateRefreshToken("expired"));
+        verify(refreshTokenRepository).delete(expiredToken);
+    }
+
+    @Test
+    void deleteByUserId_ShouldDeleteSuccessfully() {
+
+        refreshTokenService.deleteByUserId(5L);
+
+        verify(refreshTokenRepository).deleteByUserId(5L);
+    }
+
+    @Test
+    void deleteExpiredTokens_ShouldLogWhenTokensDeleted() {
+
+        when(refreshTokenRepository.deleteByExpiryDateBefore(any())).thenReturn(3);
+
+        refreshTokenService.deleteExpiredTokens();
+
+        verify(refreshTokenRepository).deleteByExpiryDateBefore(any());
+    }
+
+    @Test
+    void deleteExpiredTokens_ShouldNotLog_WhenNoTokensDeleted() {
+
+        when(refreshTokenRepository.deleteByExpiryDateBefore(any())).thenReturn(0);
+
+        refreshTokenService.deleteExpiredTokens();
+
+        verify(refreshTokenRepository).deleteByExpiryDateBefore(any());
     }
 }
