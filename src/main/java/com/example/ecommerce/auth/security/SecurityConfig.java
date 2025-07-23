@@ -25,7 +25,7 @@ public class SecurityConfig {
 
     private static final List<String> SWAGGER_ENDPOINTS = List.of(
         "/swagger-ui/**",
-        "/v3/api-docs/**", 
+        "/v3/api-docs/**", 	
         "/swagger-ui.html",
         "/webjars/**"
     );

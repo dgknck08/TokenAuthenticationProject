@@ -13,6 +13,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.example.ecommerce.auth.exception.JwtValidationException;
+
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.MalformedJwtException;
@@ -31,30 +33,47 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
-	public void doFilterInternal(HttpServletRequest request,
+    public void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         try {
             String token = getJwtFromRequest(request);
             
-            if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
-                Authentication auth = jwtTokenProvider.getAuthentication(token);
-                SecurityContextHolder.getContext().setAuthentication(auth);
+            if (StringUtils.hasText(token)) {
+                // Token validation - blacklist kontrolü dahil
+                if (jwtTokenProvider.validateToken(token)) {
+                    Authentication auth = jwtTokenProvider.getAuthentication(token);
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                    
+                    // Token ID'yi request attribute olarak ekle (audit için)
+                    String tokenId = jwtTokenProvider.getTokenId(token);
+                    request.setAttribute("tokenId", tokenId);
+                    request.setAttribute("authenticatedUser", auth.getName());
+                }
             }
+        } catch (JwtValidationException e) {
+            logger.warn("JWT validation failed: {}", e.getMessage());
+            clearSecurityContext();
+            sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
+            return;
         } catch (SignatureException | MalformedJwtException e) {
             logger.error("Invalid JWT token: {}", e.getMessage());
+            clearSecurityContext();
             sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid JWT token");
             return;
         } catch (ExpiredJwtException e) {
             logger.warn("Expired JWT token: {}", e.getMessage());
+            clearSecurityContext();
             sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "JWT token expired");
             return;
         } catch (JwtException e) {
             logger.error("JWT processing error: {}", e.getMessage());
+            clearSecurityContext();
             sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "JWT processing error");
             return;
         } catch (RuntimeException e) {
-            logger.error("Unexpected error in JWT filter: {}", e.getMessage());
+            logger.error("Unexpected error in JWT filter: {}", e.getMessage(), e);
+            clearSecurityContext();
             sendErrorResponse(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Internal server error");
             return;
         }
@@ -71,11 +90,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return null;
     }
 
+    private void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
     private void sendErrorResponse(HttpServletResponse response, int status, String message) throws IOException {
         response.setStatus(status);
         response.setContentType("application/json;charset=UTF-8");
         
-        String json = String.format("{\"error\": \"%s\"}", message);
+        String json = String.format(
+            "{\"error\": \"%s\", \"timestamp\": \"%s\", \"status\": %d}", 
+            message, 
+            java.time.Instant.now().toString(),
+            status
+        );
         response.getWriter().write(json);
     }
 }
