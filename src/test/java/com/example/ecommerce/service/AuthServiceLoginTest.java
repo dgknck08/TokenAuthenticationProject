@@ -7,9 +7,9 @@ import com.example.ecommerce.auth.exception.InvalidCredentialsException;
 import com.example.ecommerce.auth.model.RefreshToken;
 import com.example.ecommerce.auth.model.User;
 import com.example.ecommerce.auth.security.JwtTokenProvider;
-import com.example.ecommerce.auth.service.AuthService;
 import com.example.ecommerce.auth.service.RefreshTokenService;
 import com.example.ecommerce.auth.service.UserService;
+import com.example.ecommerce.auth.service.impl.AuthServiceImpl;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +29,7 @@ class AuthServiceLoginTest {
     private JwtTokenProvider jwtTokenProvider;
     private RefreshTokenService refreshTokenService;
     private AuthenticationManager authenticationManager;
-    private AuthService authService;
+    private AuthServiceImpl authService;
 
     @BeforeEach
     void setUp() {
@@ -38,7 +38,7 @@ class AuthServiceLoginTest {
         refreshTokenService = mock(RefreshTokenService.class);
         authenticationManager = mock(AuthenticationManager.class);
 
-        authService = new AuthService(userService, jwtTokenProvider, refreshTokenService, authenticationManager);
+        authService = new AuthServiceImpl(userService, jwtTokenProvider, refreshTokenService, authenticationManager);
     }
 
     @Test
