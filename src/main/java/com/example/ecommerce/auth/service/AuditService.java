@@ -8,11 +8,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
 @Service
 @Transactional
 public class AuditService {
@@ -30,8 +33,15 @@ public class AuditService {
     //(login logout vs) loglamak için kullanılan method.
     public void logAuthEvent(Long userId, String username, AuditLog.AuditAction action, 
     		String description, HttpServletRequest request) {
+        //async olarak kullanım
+        logAuthEventAsync(userId, username, action, description, request);
+    }
+
+    @Async("auditExecutor")
+    public CompletableFuture<Void> logAuthEventAsync(Long userId, String username, AuditLog.AuditAction action, 
+    		String description, HttpServletRequest request) {
         try {
-            // Audit bilgileri builder ile oluşturma.
+            //Builder kullanarak audit objesi oluşturma
             AuditLog.AuditLogBuilder auditBuilder = AuditLog.builder()
                     .userId(userId)
                     .username(username)
@@ -39,12 +49,12 @@ public class AuditService {
                     .description(description);
             
             if (request != null) {
-                // client ip alinmasi.
+                //client ip
                 auditBuilder
                     .ipAddress(getClientIpAddress(request))
                     .userAgent(request.getHeader("User-Agent"));
 
-                // ek bilgiler json 
+                //ek bilgiler
                 Map<String, Object> details = new HashMap<>();
                 details.put("requestUri", request.getRequestURI());
                 details.put("method", request.getMethod());
@@ -53,45 +63,48 @@ public class AuditService {
                 auditBuilder.details(objectMapper.writeValueAsString(details));
             }
             
-            // audit entityleri veritabanına kaydediliyor.
+            //audit Loglari veritabanına save ediliyor.
             AuditLog auditLog = auditBuilder.build();
             auditLogRepository.save(auditLog);
             
             logger.info("Audit event logged: {} for user: {}", action, username);
+            return CompletableFuture.completedFuture(null);
             
         } catch (JsonProcessingException e) {
             logger.error("Error serializing audit details", e);
+            return CompletableFuture.failedFuture(e);
         } catch (Exception e) {
             logger.error("Error logging audit event", e);
+            return CompletableFuture.failedFuture(e);
         }
     }
 
     
-    // audit loglarını getirir (userId)
+    //audit loglarını getirir (userId)
     public Page<AuditLog> getUserAuditLogs(Long userId, Pageable pageable) {
         return auditLogRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
     }
 
-    // audit loglarını getirir (username)
+    //audit loglarını getirir (username)
     public Page<AuditLog> getUserAuditLogs(String username, Pageable pageable) {
         return auditLogRepository.findByUsernameOrderByCreatedAtDesc(username, pageable);
     }
 
-    //IP adresini almak için kullanilan method
+    //IP adresini almak için kullanilan metod
     private String getClientIpAddress(HttpServletRequest request) {
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         //X-Forwarded-For: <client-ip>, <proxy1-ip>, <proxy2-ip>, ...
-        //ilk IP client ipsini verir.
+        // 1 ilk IP client ipsini verir.
         if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
             return xForwardedFor.split(",")[0].trim(); 
         }
-        //eğer x-forwarded-for headeri yoksa burasi kullanilacak.
+        // 2 eğer x-forwarded-for headeri yoksa burasi kullanilacak.
         String xRealIp = request.getHeader("X-Real-IP");
         if (xRealIp != null && !xRealIp.isEmpty()) {
             return xRealIp;
         }
-
-        //hiç Header yoksa burasi.
+        
+        // 3 hiç Header yoksa burasi.
         return request.getRemoteAddr();
     }
 }
