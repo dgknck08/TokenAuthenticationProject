@@ -1,6 +1,5 @@
 package com.example.ecommerce.service;
 
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -10,16 +9,19 @@ import org.springframework.security.core.Authentication;
 
 import com.example.ecommerce.auth.security.JwtTokenProvider;
 import com.example.ecommerce.auth.service.JwtService;
+import com.example.ecommerce.auth.service.JwtValidationService;
 
 public class JwtServiceTest {
 
     private JwtTokenProvider jwtTokenProvider;
+    private JwtValidationService jwtValidationService;
     private JwtService jwtService;
 
     @BeforeEach
     void setup() {
         jwtTokenProvider = mock(JwtTokenProvider.class);
-        jwtService = new JwtService(jwtTokenProvider);
+        jwtValidationService = mock(JwtValidationService.class);
+        jwtService = new JwtService(jwtTokenProvider, jwtValidationService);
     }
 
     @Test
@@ -52,24 +54,24 @@ public class JwtServiceTest {
     void validateToken_ShouldReturnTrue_WhenTokenValid() {
         String token = "valid-token";
 
-        when(jwtTokenProvider.validateToken(token)).thenReturn(true);
+        when(jwtValidationService.validateToken(token)).thenReturn(true);
 
         boolean result = jwtService.validateToken(token);
 
         assertTrue(result);
-        verify(jwtTokenProvider).validateToken(token);
+        verify(jwtValidationService).validateToken(token);
     }
 
     @Test
     void validateToken_ShouldReturnFalse_WhenTokenInvalid() {
         String token = "invalid-token";
 
-        when(jwtTokenProvider.validateToken(token)).thenReturn(false);
+        when(jwtValidationService.validateToken(token)).thenReturn(false);
 
         boolean result = jwtService.validateToken(token);
 
         assertFalse(result);
-        verify(jwtTokenProvider).validateToken(token);
+        verify(jwtValidationService).validateToken(token);
     }
 
     @Test
