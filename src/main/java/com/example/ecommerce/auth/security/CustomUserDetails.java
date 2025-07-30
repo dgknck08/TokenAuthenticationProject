@@ -1,26 +1,28 @@
 package com.example.ecommerce.auth.security;
 
+import com.example.ecommerce.auth.enums.Role;
 import com.example.ecommerce.auth.model.User;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-@AllArgsConstructor
+@SuppressWarnings("serial")
+@RequiredArgsConstructor
 public class CustomUserDetails implements UserDetails {
 
-    private static final long serialVersionUID = 1L;
     private final User user;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return user.getRoles()
-                   .stream()
-                   .map(role -> new SimpleGrantedAuthority(role.name()))
-                   .collect(Collectors.toList());
+        Set<Role> roles = user.getRoles();
+        return roles.stream()
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.name()))
+                .collect(Collectors.toSet());
     }
 
     @Override
@@ -30,17 +32,17 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public String getUsername() {
-        return user.getUsername();
+        return user.getUsername();  
     }
 
     @Override
     public boolean isAccountNonExpired() {
-        return true;
+        return true; 
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return user.isAccountNonLocked();
     }
 
     @Override
