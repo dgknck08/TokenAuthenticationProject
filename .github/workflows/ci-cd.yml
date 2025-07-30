@@ -44,6 +44,9 @@ jobs:
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
 
+    - name: Grant execute permission for mvnw
+      run: chmod +x ./mvnw
+
     - name: Run tests
       run: ./mvnw clean test
       env:
@@ -53,7 +56,6 @@ jobs:
         SPRING_DATASOURCE_PASSWORD: test
         SPRING_REDIS_HOST: localhost
         SPRING_REDIS_PORT: 6379
-
     - name: Generate test report
       uses: dorny/test-reporter@v1
       if: success() || failure()
