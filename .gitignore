@@ -36,6 +36,8 @@ config.properties
 application.yml
 .env
 application.properties
+sonar-project.properties
+application-test.properties
 # Derleme çıktı klasörleri
 target/
 bin/
