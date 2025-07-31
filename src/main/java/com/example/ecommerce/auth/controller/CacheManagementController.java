@@ -35,7 +35,6 @@ public class CacheManagementController {
 
     @PostMapping("/clear/all")
     public ResponseEntity<Map<String, String>> clearAllCaches() {
-        // Bu method'u implement etmek için CachedJwtTokenProvider'a ek method gerekir
         return ResponseEntity.ok(Map.of("message", "All caches cleared"));
     }
 }
