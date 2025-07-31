@@ -107,6 +107,7 @@ jobs:
         name: Maven Tests
         path: target/surefire-reports/*.xml
         reporter: java-junit
+        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: SonarCloud Scan
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
