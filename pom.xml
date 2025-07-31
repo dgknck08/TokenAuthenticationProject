@@ -258,10 +258,10 @@
 
     <reporting>
         <plugins>
-        <plugin>
-  <groupId>com.github.spotbugs</groupId>
-  <artifactId>spotbugs-maven-plugin</artifactId>
-  <version>4.8.0</version> <!-- Örnek -->
+     <plugin>
+    <groupId>com.github.spotbugs</groupId>
+    <artifactId>spotbugs-maven-plugin</artifactId>
+    <version>4.7.3</version>
 </plugin>
 
             <plugin>
