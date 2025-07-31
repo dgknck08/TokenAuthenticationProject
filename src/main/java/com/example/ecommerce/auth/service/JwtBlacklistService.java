@@ -164,9 +164,6 @@ public class JwtBlacklistService {
         }
     }
 
-    /**
-     * Token metadata'sını getirir
-     */
     public Map<String, Object> getTokenMetadata(String token) {
         try {
             String tokenId = jwtUtils.getTokenId(token);
@@ -184,9 +181,6 @@ public class JwtBlacklistService {
         }
     }
 
-    /**
-     * Kullanıcının aktif tokenlerini getirir
-     */
     public Set<String> getUserTokens(String username) {
         try {
             String key = USER_TOKENS_KEY + username;
@@ -204,9 +198,6 @@ public class JwtBlacklistService {
         }
     }
 
-    /**
-     * Kullanıcının token listesinden belirli bir tokenı kaldırır
-     */
     private void removeTokenFromUserList(String username, String token) {
         try {
             String key = USER_TOKENS_KEY + username;
@@ -216,9 +207,6 @@ public class JwtBlacklistService {
         }
     }
 
-    /**
-     * Kullanıcının tüm token listesini temizler
-     */
     private void clearUserTokens(String username) {
         try {
             String key = USER_TOKENS_KEY + username;
@@ -228,9 +216,7 @@ public class JwtBlacklistService {
         }
     }
 
-    /**
-     * Kullanıcının aktif token sayısını getirir
-     */
+
     public long getUserActiveTokenCount(String username) {
         try {
             String key = USER_TOKENS_KEY + username;
@@ -242,9 +228,7 @@ public class JwtBlacklistService {
         }
     }
 
-    /**
-     * Tüm kullanıcıların token istatistiklerini getirir (admin için)
-     */
+
     public Map<String, Long> getAllUserTokenStats() {
         try {
             Map<String, Long> stats = new HashMap<>();
@@ -267,31 +251,22 @@ public class JwtBlacklistService {
         }
     }
 
-    /**
-     * Süresi dolmuş metadata'ları temizler (scheduled job için)
-     */
     public void cleanupExpiredMetadata() {
         try {
-            // Bu method bir scheduled job tarafından çağrılabilir
-            // Redis'in TTL özelliği otomatik temizlik yapar ama
-            // manuel temizlik de yapılabilir
+
             logger.info("Cleanup expired metadata completed");
         } catch (Exception e) {
             logger.error("Error during metadata cleanup: {}", e.getMessage());
         }
     }
 
-    /**
-     * Device fingerprint oluşturur
-     */
+
     private String generateDeviceFingerprint(String userAgent, String ipAddress) {
         String combined = (userAgent != null ? userAgent : "") + ":" + ipAddress;
         return String.valueOf(combined.hashCode());
     }
 
-    /**
-     * Map'i byte map'e çevirir (Redis için)
-     */
+
     private Map<byte[], byte[]> convertToByteMap(Map<String, Object> map) {
         Map<byte[], byte[]> byteMap = new HashMap<>();
         map.forEach((key, value) -> {
