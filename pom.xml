@@ -258,6 +258,12 @@
 
     <reporting>
         <plugins>
+        <plugin>
+  <groupId>com.github.spotbugs</groupId>
+  <artifactId>spotbugs-maven-plugin</artifactId>
+  <version>4.8.0</version> <!-- Örnek -->
+</plugin>
+
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
