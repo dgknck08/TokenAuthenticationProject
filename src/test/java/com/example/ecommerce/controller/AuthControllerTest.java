@@ -1,6 +1,5 @@
 package com.example.ecommerce.controller;
 
-
 import com.example.ecommerce.auth.controller.AuthController;
 import com.example.ecommerce.auth.dto.LoginRequest;
 import com.example.ecommerce.auth.dto.LoginResponse;
@@ -9,51 +8,63 @@ import com.example.ecommerce.auth.service.AccountLockoutService;
 import com.example.ecommerce.auth.service.AuthService;
 import com.example.ecommerce.auth.service.JwtBlacklistService;
 import com.example.ecommerce.auth.service.JwtValidationService;
-import com.example.ecommerce.auth.security.JwtTokenProvider;
+import com.example.ecommerce.auth.security.SecurityConfig;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(AuthController.class)
+@ExtendWith(MockitoExtension.class)
 public class AuthControllerTest {
 
-
-    @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @Mock
     private AuthService authService;
 
-    @MockBean
-    private JwtTokenProvider jwtTokenProvider;
-
-    @MockBean
+    @Mock
     private AccountLockoutService accountLockoutService;
 
-    @MockBean
+    @Mock
     private JwtBlacklistService jwtBlacklistService;
 
-    @MockBean
-    private JwtValidationService jwtValidationService;  
+    @Mock
+    private JwtValidationService jwtValidationService;
+
+    @InjectMocks
+    private AuthController authController;
+
+    @BeforeEach
+    public void setup() {
+        mockMvc = MockMvcBuilders.standaloneSetup(authController)
+       
+                .build();
+    }
 
     @Test
     public void login_whenValidCredentials_returnsOk() throws Exception {
         LoginResponse loginResponse = new LoginResponse(
-            "access-token", 
-            "refresh-token", 
-            "testuser", 
+            "access-token",
+            "refresh-token",
+            "testuser",
             "testuser@example.com"
         );
+
         Mockito.when(accountLockoutService.isAccountLocked(any())).thenReturn(false);
-        Mockito.when(authService.login(any())).thenReturn(loginResponse);
+        Mockito.when(authService.login(any(LoginRequest.class))).thenReturn(loginResponse);
 
         String loginJson = """
             {
@@ -69,6 +80,7 @@ public class AuthControllerTest {
             .andExpect(jsonPath("$.accessToken").value("access-token"))
             .andExpect(jsonPath("$.username").value("testuser"));
     }
+
     @Test
     public void login_whenAccountLocked_returnsLocked() throws Exception {
         Mockito.when(accountLockoutService.isAccountLocked(any())).thenReturn(true);
@@ -90,7 +102,7 @@ public class AuthControllerTest {
     @Test
     public void login_whenInvalidCredentials_returnsUnauthorized() throws Exception {
         Mockito.when(accountLockoutService.isAccountLocked(any())).thenReturn(false);
-        Mockito.when(authService.login(any())).thenThrow(new InvalidCredentialsException("Invalid credentials"));
+        Mockito.when(authService.login(any(LoginRequest.class))).thenThrow(new InvalidCredentialsException("Invalid credentials"));
 
         String loginJson = """
             {

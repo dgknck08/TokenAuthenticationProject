@@ -1,6 +1,5 @@
 package com.example.ecommerce.security;
 
-
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -21,6 +20,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.example.ecommerce.auth.security.JwtAuthenticationFilter;
 import com.example.ecommerce.auth.security.JwtTokenProvider;
+import com.example.ecommerce.auth.service.JwtValidationService;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -28,6 +28,7 @@ import java.io.StringWriter;
 public class JwtAuthenticationFilterTest {
 
     private JwtTokenProvider tokenProvider;
+    private JwtValidationService jwtValidationService;
     private JwtAuthenticationFilter filter;
     private HttpServletRequest request;
     private HttpServletResponse response;
@@ -36,7 +37,8 @@ public class JwtAuthenticationFilterTest {
     @BeforeEach
     public void setup() {
         tokenProvider = mock(JwtTokenProvider.class);
-        filter = new JwtAuthenticationFilter(tokenProvider);
+        jwtValidationService = mock(JwtValidationService.class);
+        filter = new JwtAuthenticationFilter(tokenProvider, jwtValidationService);
         request = mock(HttpServletRequest.class);
         response = mock(HttpServletResponse.class);
         filterChain = mock(FilterChain.class);
@@ -50,7 +52,7 @@ public class JwtAuthenticationFilterTest {
         Authentication auth = mock(Authentication.class);
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
-        when(tokenProvider.validateToken(token)).thenReturn(true);
+        when(jwtValidationService.validateToken(token)).thenReturn(true);
         when(tokenProvider.getAuthentication(token)).thenReturn(auth);
 
         filter.doFilterInternal(request, response, filterChain);
@@ -72,19 +74,19 @@ public class JwtAuthenticationFilterTest {
     @Test
     public void testDoFilterInternal_invalidSignature_returnsUnauthorized() throws Exception {
 
-    	String token = "invalid.token";
+        String token = "invalid.token";
         StringWriter responseWriter = new StringWriter();
         PrintWriter printWriter = new PrintWriter(responseWriter);
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
-        when(tokenProvider.validateToken(token)).thenThrow(new SignatureException("Invalid signature"));
+        when(jwtValidationService.validateToken(token)).thenThrow(new SignatureException("Invalid signature"));
         when(response.getWriter()).thenReturn(printWriter);
 
         filter.doFilterInternal(request, response, filterChain);
 
         verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         verify(response).setContentType("application/json;charset=UTF-8");
-        printWriter.flush(); 
+        printWriter.flush();
         assertTrue(responseWriter.toString().contains("Invalid JWT token"));
         verify(filterChain, never()).doFilter(request, response);
     }
@@ -92,12 +94,12 @@ public class JwtAuthenticationFilterTest {
     @Test
     public void testDoFilterInternal_expiredToken_returnsUnauthorized() throws Exception {
 
-    	String token = "expired.token";
+        String token = "expired.token";
         StringWriter responseWriter = new StringWriter();
         PrintWriter printWriter = new PrintWriter(responseWriter);
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
-        when(tokenProvider.validateToken(token)).thenThrow(new ExpiredJwtException(null, null, "Token expired"));
+        when(jwtValidationService.validateToken(token)).thenThrow(new ExpiredJwtException(null, null, "Token expired"));
         when(response.getWriter()).thenReturn(printWriter);
 
         filter.doFilterInternal(request, response, filterChain);
@@ -112,12 +114,12 @@ public class JwtAuthenticationFilterTest {
     @Test
     public void testDoFilterInternal_malformedToken_returnsUnauthorized() throws Exception {
 
-    	String token = "malformed.token";
+        String token = "malformed.token";
         StringWriter responseWriter = new StringWriter();
         PrintWriter printWriter = new PrintWriter(responseWriter);
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
-        when(tokenProvider.validateToken(token)).thenThrow(new MalformedJwtException("Malformed token"));
+        when(jwtValidationService.validateToken(token)).thenThrow(new MalformedJwtException("Malformed token"));
         when(response.getWriter()).thenReturn(printWriter);
 
         filter.doFilterInternal(request, response, filterChain);
@@ -137,12 +139,10 @@ public class JwtAuthenticationFilterTest {
         PrintWriter printWriter = new PrintWriter(responseWriter);
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
-        when(tokenProvider.validateToken(token)).thenThrow(new JwtException("JWT error"));
+        when(jwtValidationService.validateToken(token)).thenThrow(new JwtException("JWT error"));
         when(response.getWriter()).thenReturn(printWriter);
 
-
         filter.doFilterInternal(request, response, filterChain);
-
 
         verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         verify(response).setContentType("application/json;charset=UTF-8");
@@ -159,7 +159,7 @@ public class JwtAuthenticationFilterTest {
         PrintWriter printWriter = new PrintWriter(responseWriter);
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
-        when(tokenProvider.validateToken(token)).thenReturn(true);
+        when(jwtValidationService.validateToken(token)).thenReturn(true);
         when(tokenProvider.getAuthentication(token)).thenThrow(new RuntimeException("Unexpected error"));
         when(response.getWriter()).thenReturn(printWriter);
 
@@ -177,12 +177,12 @@ public class JwtAuthenticationFilterTest {
 
         when(request.getHeader("Authorization")).thenReturn("InvalidToken");
 
-
         filter.doFilterInternal(request, response, filterChain);
 
         assertNull(SecurityContextHolder.getContext().getAuthentication());
         verify(filterChain).doFilter(request, response);
-        verify(tokenProvider, never()).validateToken(any());
+        verify(tokenProvider, never()).getAuthentication(any());
+        verify(jwtValidationService, never()).validateToken(any());
     }
 
     @Test
@@ -194,6 +194,7 @@ public class JwtAuthenticationFilterTest {
 
         assertNull(SecurityContextHolder.getContext().getAuthentication());
         verify(filterChain).doFilter(request, response);
-        verify(tokenProvider, never()).validateToken(any());
+        verify(tokenProvider, never()).getAuthentication(any());
+        verify(jwtValidationService, never()).validateToken(any());
     }
 }

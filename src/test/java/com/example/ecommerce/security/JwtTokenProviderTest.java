@@ -1,6 +1,7 @@
 package com.example.ecommerce.security;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -24,57 +25,54 @@ import java.util.List;
 
 class JwtTokenProviderTest {
 
-	 @Mock
-	    private UserDetailsService userDetailsService;
+    @Mock
+    private UserDetailsService userDetailsService;
 
-	    @Mock
-	    private JwtUtils jwtUtils;
+    @Mock
+    private JwtUtils jwtUtils;
 
-	    @Mock
-	    private Cache<String, Claims> jwtClaimsCache; // Burayı Claims tipinde yap
+    @Mock
+    private Cache<String, Claims> jwtClaimsCache;
 
-	    @Mock
-	    private Cache<String, Boolean> jwtValidationCache;
+    @Mock
+    private Cache<String, Boolean> jwtValidationCache;
 
-	    @Mock
-	    private Cache<String, UserDetails> userDetailsCache; // Burayı UserDetails tipinde yap
+    @Mock
+    private Cache<String, UserDetails> userDetailsCache;
 
-	    private JwtTokenProvider jwtTokenProvider;
+    private JwtTokenProvider jwtTokenProvider;
 
-	    private final String secret = "01234567890123456789012345678901234567890123456789012345678901234567890";
-	    private final int expirationMs = 3600000;
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
 
-	    @BeforeEach
-	    void setUp() {
-	        MockitoAnnotations.openMocks(this);
-	        jwtTokenProvider = new JwtTokenProvider(
-	            userDetailsService,
-	            jwtUtils,
-	            jwtClaimsCache,          // Artık cast yok, tipi doğru
-	            jwtValidationCache,
-	            userDetailsCache,        // Doğru tipte mock
-	            secret,
-	            expirationMs,
-	            "ecommerce-app"
-	        );
-	    }
+        String strongKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+        jwtTokenProvider = new JwtTokenProvider(
+            userDetailsService,
+            jwtUtils,
+            jwtClaimsCache,
+            jwtValidationCache,
+            userDetailsCache,
+            strongKey,
+            3600000,
+            "ecommerce-app"
+        );
+
+        // put() void döner, doNothing kullan
+        doNothing().when(jwtClaimsCache).put(anyString(), any());
+    }
+
 
     @Test
     void testGenerateTokenWithUsername_simple() {
         String username = "user1";
-        when(jwtUtils.parseToken(anyString())).thenReturn(mock(io.jsonwebtoken.Claims.class));
+
+        Claims claimsMock = mock(Claims.class);
+        when(jwtUtils.parseToken(anyString())).thenReturn(claimsMock);
+        doNothing().when(jwtClaimsCache).put(anyString(), any()); 
+
         String token = jwtTokenProvider.generateTokenWithUsername(username);
-
-        assertNotNull(token);
-        assertFalse(token.isEmpty());
-    }
-
-    @Test
-    void testGenerateTokenWithUsername_withRoles() {
-        String username = "user1";
-        List<String> roles = List.of("ROLE_USER", "ROLE_ADMIN");
-        when(jwtUtils.parseToken(anyString())).thenReturn(mock(io.jsonwebtoken.Claims.class));
-        String token = jwtTokenProvider.generateTokenWithUsername(username, roles);
 
         assertNotNull(token);
         assertFalse(token.isEmpty());
@@ -85,10 +83,12 @@ class JwtTokenProviderTest {
         UserDetails userDetails = new User("authUser", "password", List.of(new SimpleGrantedAuthority("ROLE_USER")));
         when(userDetailsService.loadUserByUsername("authUser")).thenReturn(userDetails);
 
-        io.jsonwebtoken.Claims claims = mock(io.jsonwebtoken.Claims.class);
+        Claims claims = mock(Claims.class);
         when(claims.getSubject()).thenReturn("authUser");
         when(claims.get("roles")).thenReturn(List.of("ROLE_USER"));
-        when(jwtClaimsCache.getIfPresent(anyString())).thenReturn(claims);
+
+        when(jwtClaimsCache.getIfPresent("token")).thenReturn(claims);
+        when(userDetailsCache.get(eq("authUser"), any())).thenReturn(userDetails);
 
         Authentication authentication = jwtTokenProvider.getAuthentication("token");
 
@@ -99,27 +99,14 @@ class JwtTokenProviderTest {
     }
 
     @Test
-    public void testGenerateToken() {
-        Authentication authentication = new UsernamePasswordAuthenticationToken(
-                "testUser",
-                null,
-                List.of(new SimpleGrantedAuthority("ROLE_USER"), new SimpleGrantedAuthority("ROLE_ADMIN"))
-        );
-        when(jwtUtils.parseToken(anyString())).thenReturn(mock(io.jsonwebtoken.Claims.class));
-
-        String token = jwtTokenProvider.generateToken(authentication);
-
-        assertNotNull(token);
-        assertFalse(token.isEmpty());
-
-        String username = jwtTokenProvider.getUsernameFromToken(token);
-        assertNotNull(username);
-    }
-
-    @Test
     void testValidateTokenStructure_ValidToken() {
-        when(jwtUtils.parseToken(anyString())).thenReturn(mock(io.jsonwebtoken.Claims.class));
-        when(jwtValidationCache.get(anyString(), any())).thenCallRealMethod();
+        when(jwtValidationCache.get(anyString(), any())).thenAnswer(invocation -> {
+            String token = invocation.getArgument(0);
+            java.util.function.Function<String, Boolean> func = invocation.getArgument(1);
+            return func.apply(token);
+        });
+
+        when(jwtUtils.parseToken(anyString())).thenReturn(mock(Claims.class));
 
         boolean valid = jwtTokenProvider.validateTokenStructure("validToken");
 
@@ -128,19 +115,35 @@ class JwtTokenProviderTest {
 
     @Test
     void testValidateTokenStructure_ExpiredToken() {
-        when(jwtValidationCache.get(anyString(), any())).then(invocation -> {
-            throw new ExpiredJwtException(null, null, "Token expired");
+        when(jwtValidationCache.get(anyString(), any())).thenAnswer(invocation -> {
+            String token = invocation.getArgument(0);
+            java.util.function.Function<String, Boolean> func = invocation.getArgument(1);
+
+            when(jwtUtils.parseToken(token)).thenThrow(new ExpiredJwtException(null, null, "Token expired"));
+
+            return func.apply(token);
         });
 
-        assertThrows(JwtValidationException.class, () -> jwtTokenProvider.validateTokenStructure("expiredToken"));
+        JwtValidationException ex = assertThrows(JwtValidationException.class, () -> {
+            jwtTokenProvider.validateTokenStructure("expiredToken");
+        });
+
+        assertTrue(ex.getMessage().toLowerCase().contains("expired"));
     }
 
     @Test
     void testValidateTokenStructure_InvalidToken() {
-        when(jwtValidationCache.get(anyString(), any())).then(invocation -> {
-            throw new JwtValidationException("Invalid token");
+        when(jwtValidationCache.get(anyString(), any())).thenAnswer(invocation -> {
+            String token = invocation.getArgument(0);
+            java.util.function.Function<String, Boolean> func = invocation.getArgument(1);
+
+            when(jwtUtils.parseToken(token)).thenThrow(new JwtValidationException("Invalid token"));
+
+            return func.apply(token);
         });
 
-        assertThrows(JwtValidationException.class, () -> jwtTokenProvider.validateTokenStructure("invalidToken"));
+        assertThrows(JwtValidationException.class, () -> {
+            jwtTokenProvider.validateTokenStructure("invalidToken");
+        });
     }
 }

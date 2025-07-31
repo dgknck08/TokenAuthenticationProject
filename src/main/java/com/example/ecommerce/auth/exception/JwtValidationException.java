@@ -1,7 +1,12 @@
 package com.example.ecommerce.auth.exception;
 
 public class JwtValidationException extends RuntimeException {
-    public JwtValidationException(String message) {
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public JwtValidationException(String message) {
         super(message);
     }
     

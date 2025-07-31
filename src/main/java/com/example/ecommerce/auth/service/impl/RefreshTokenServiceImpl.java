@@ -1,6 +1,7 @@
 package com.example.ecommerce.auth.service.impl;
 
 import com.example.ecommerce.auth.exception.TokenRefreshException;
+
 import com.example.ecommerce.auth.exception.UserNotFoundException;
 import com.example.ecommerce.auth.model.RefreshToken;
 import com.example.ecommerce.auth.model.User;
@@ -35,6 +36,8 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         this.refreshTokenDurationMs = refreshTokenDurationMs;
     }
 
+    
+    //register durumlarinda.
     @Override
     public RefreshToken createRefreshToken(Long userId) {
         User user = userService.findById(userId)
@@ -54,6 +57,8 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         return saved;
     }
 
+    
+    //refresh token expired durumlarinda.
     @Override
     public String validateRefreshToken(String token) {
         RefreshToken refreshToken = refreshTokenRepository.findByToken(token)

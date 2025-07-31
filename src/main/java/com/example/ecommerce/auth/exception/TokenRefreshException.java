@@ -1,7 +1,12 @@
 package com.example.ecommerce.auth.exception;
 
 public class TokenRefreshException extends RuntimeException {
-    public TokenRefreshException(String message) {
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public TokenRefreshException(String message) {
         super(message);
     }
     

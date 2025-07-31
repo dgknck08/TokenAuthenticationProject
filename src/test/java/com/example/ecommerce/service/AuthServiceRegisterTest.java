@@ -21,9 +21,9 @@ import com.example.ecommerce.auth.exception.UserAlreadyExistsException;
 import com.example.ecommerce.auth.model.RefreshToken;
 import com.example.ecommerce.auth.model.User;
 import com.example.ecommerce.auth.security.JwtTokenProvider;
-import com.example.ecommerce.auth.service.AuthService;
 import com.example.ecommerce.auth.service.RefreshTokenService;
 import com.example.ecommerce.auth.service.UserService;
+import com.example.ecommerce.auth.service.impl.AuthServiceImpl;
 
 public class AuthServiceRegisterTest {
 
@@ -31,7 +31,7 @@ public class AuthServiceRegisterTest {
     private JwtTokenProvider jwtTokenProvider;
     private RefreshTokenService refreshTokenService;
     private AuthenticationManager authenticationManager;
-    private AuthService authService;
+    private AuthServiceImpl authService;
 
     @BeforeEach
     void setUp() {
@@ -40,7 +40,7 @@ public class AuthServiceRegisterTest {
         refreshTokenService = mock(RefreshTokenService.class);
         authenticationManager = mock(AuthenticationManager.class);
 
-        authService = new AuthService(userService, jwtTokenProvider, refreshTokenService, authenticationManager);
+        authService = new AuthServiceImpl(userService, jwtTokenProvider, refreshTokenService, authenticationManager);
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.example.ecommerce.auth.service.impl;
 
 import com.example.ecommerce.auth.dto.*;
+
 import com.example.ecommerce.auth.exception.InvalidCredentialsException;
 import com.example.ecommerce.auth.exception.UserAlreadyExistsException;
 import com.example.ecommerce.auth.exception.UserNotFoundException;
@@ -39,6 +40,13 @@ public class AuthServiceImpl implements AuthService{
         this.authenticationManager = authenticationManager;
     }
 
+    
+    /*
+     * client->bilgiler ile register olur.
+     * acccestoken jwtprovider ile bodyde yollanmak için hazırlanır.
+     * refreshtoken oluşturulur dbye kaydedilir httponly ile cliente iletmek için hazırlanır.
+     * 
+     * */
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
         logger.info("Registering new user: {}", request.username());
@@ -53,6 +61,15 @@ public class AuthServiceImpl implements AuthService{
         return new RegisterResponse(accessToken, refreshToken, user.getUsername(), user.getEmail());
     }
 
+    /**
+     * client -> username ve password ile doğrulamasını yapar.
+     * Doğrulama başarılı olursa -> (access token) ve (refresh token) üretir.
+     * Üretilen tokenlar ve kullanıcı bilgileri ile LoginResponse nesnesi döner.
+     *
+     * @param request username ve password bilgilerini içeren LoginRequest 
+     * @return acces tokenı refresh tokenı username ve eposta bilgilerini içeren LoginResponse 
+     * @throws InvalidCredentialsException doğrulama başarısızsa fırlatılır
+     */
     public LoginResponse login(LoginRequest request) {
         logger.info("Login attempt for user: {}", request.username());
         
@@ -75,7 +92,10 @@ public class AuthServiceImpl implements AuthService{
             throw new InvalidCredentialsException("Invalid username or password");
         }
     }
-
+    /**
+     * client -> refreshtoken ile yeni accestoken almak için buraya gelir.
+     * refreshtoken valid ise yeni accestoken valid değil ise login olmali
+     */
     public RefreshTokenResponse refreshToken(String refreshToken) {
         if (refreshToken == null || refreshToken.trim().isEmpty()) {
             logger.warn("Refresh token request with empty token");

@@ -19,6 +19,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.example.ecommerce.auth.service.JwtValidationService;
+
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
@@ -34,20 +36,22 @@ public class SecurityConfig {
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final Environment env;
+    private final JwtValidationService jwtValidationService;
 
     public SecurityConfig(CustomUserDetailsService userDetailsService,
                           JwtTokenProvider jwtTokenProvider,
                           JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint, 
-                          Environment env) {
+                          Environment env, JwtValidationService jwtValidationService) {
         this.userDetailsService = userDetailsService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
+        this.jwtValidationService=jwtValidationService;
         this.env = env;
     }
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(jwtTokenProvider);
+        return new JwtAuthenticationFilter(jwtTokenProvider, jwtValidationService);
     }
 
     @Bean

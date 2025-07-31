@@ -2,6 +2,7 @@ package com.example.ecommerce.auth.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -12,7 +13,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 
 import com.example.ecommerce.auth.exception.JwtValidationException;
-import com.example.ecommerce.auth.service.JwtBlacklistService;
+import com.github.benmanes.caffeine.cache.Cache;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -26,24 +27,36 @@ import java.util.stream.Collectors;
 public class JwtTokenProvider {
     
     private final UserDetailsService userDetailsService;
-    private final JwtBlacklistService blacklistService;
+    private final JwtUtils jwtUtils;
     private final String jwtSecret;
     private final int jwtExpirationMs;
     private final String issuer;
     private final SecureRandom secureRandom;
+    
+    //Caffeine caches
+    private final Cache<String, Claims> jwtClaimsCache;
+    private final Cache<String, Boolean> jwtValidationCache;
+    private final Cache<String, UserDetails> userDetailsCache;
 
     public JwtTokenProvider(UserDetailsService userDetailsService,
-                           JwtBlacklistService blacklistService,
-                           @Value("${app.jwtSecret}") String jwtSecret,
-                           @Value("${app.jwtExpirationMs}") int jwtExpirationMs,
-                           @Value("${app.jwtIssuer:ecommerce-app}") String issuer) {
-        this.userDetailsService = userDetailsService;
-        this.blacklistService = blacklistService;
-        this.jwtSecret = jwtSecret;
-        this.jwtExpirationMs = jwtExpirationMs;
-        this.issuer = issuer;
-        this.secureRandom = new SecureRandom();
-    }
+            JwtUtils jwtUtils,
+            @Qualifier("jwtClaimsCache") Cache<String, Claims> jwtClaimsCache,
+            @Qualifier("jwtValidationCache") Cache<String, Boolean> jwtValidationCache,
+            @Qualifier("userDetailsCache") Cache<String, UserDetails> userDetailsCache,
+            @Value("${app.jwtSecret}") String jwtSecret,
+            @Value("${app.jwtExpirationMs}") int jwtExpirationMs,
+            @Value("${app.jwtIssuer:ecommerce-app}") String issuer) {
+this.userDetailsService = userDetailsService;
+this.jwtUtils = jwtUtils;
+this.jwtSecret = jwtSecret;
+this.jwtExpirationMs = jwtExpirationMs;
+this.issuer = issuer;
+this.secureRandom = new SecureRandom();
+
+this.jwtClaimsCache = jwtClaimsCache;
+this.jwtValidationCache = jwtValidationCache;
+this.userDetailsCache = userDetailsCache;
+}
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
@@ -63,7 +76,7 @@ public class JwtTokenProvider {
         claims.put("token_type", "access");
         claims.put("jti", tokenId); 
         
-        return Jwts.builder()
+        String token = Jwts.builder()
                 .setClaims(claims)
                 .setSubject(username)
                 .setIssuer(issuer)
@@ -72,6 +85,16 @@ public class JwtTokenProvider {
                 .setNotBefore(Date.from(now))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS512)
                 .compact();
+        
+        // cache içine ekleniyor.
+        try {
+            Claims tokenClaims = jwtUtils.parseToken(token);
+            jwtClaimsCache.put(token, tokenClaims);
+        } catch (Exception e) {
+            // Cache hatası token generationı etkilemez
+        }
+        
+        return token;
     }
 
     public String generateToken(Authentication authentication) {
@@ -93,7 +116,14 @@ public class JwtTokenProvider {
             roles.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList()) :
             new ArrayList<>();
         
-        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+        UserDetails userDetails = userDetailsCache.get(username, key -> {
+            try {
+                return userDetailsService.loadUserByUsername(key);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to load user details for: " + key, e);
+            }
+        });
+        
         return new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
     }
 
@@ -105,32 +135,28 @@ public class JwtTokenProvider {
         return (String) getClaimsFromToken(token).get("jti");
     }
 
-    public boolean validateToken(String token) {
-        try {
-            // Önce blacklist kontrolü
-            if (blacklistService != null && blacklistService.isTokenBlacklisted(token)) {
-                throw new JwtValidationException("Token is blacklisted");
+    //blacklist kontrollü yapiliyor.
+    public boolean validateTokenStructure(String token) {
+        return jwtValidationCache.get(token, key -> {
+            try {
+                Claims claims = jwtUtils.parseToken(key);
+                
+                // token tip kontrolü (acces mi? refresh mi?)
+                String tokenType = (String) claims.get("token_type");
+                if (tokenType != null && !"access".equals(tokenType)) {
+                    throw new JwtValidationException("Invalid token type for authentication");
+                }
+                
+                // claims -> cache eklenir.
+                jwtClaimsCache.put(key, claims);
+                
+                return true;
+            } catch (ExpiredJwtException ex) {
+                throw new JwtValidationException("JWT token expired", ex);
+            } catch (JwtException | IllegalArgumentException ex) {
+                throw new JwtValidationException("Invalid JWT token", ex);
             }
-
-            Claims claims = Jwts.parserBuilder()
-                    .setSigningKey(getSigningKey())
-                    .requireIssuer(issuer)
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody();
-            
-            // Token tipininin kontrolü
-            String tokenType = (String) claims.get("token_type");
-            if (tokenType != null && !"access".equals(tokenType)) {
-                throw new JwtValidationException("Invalid token type for authentication");
-            }
-            
-            return true;
-        } catch (ExpiredJwtException ex) {
-            throw new JwtValidationException("JWT token expired", ex);
-        } catch (JwtException | IllegalArgumentException ex) {
-            throw new JwtValidationException("Invalid JWT token", ex);
-        }
+        });
     }
 
     public Instant getExpirationDateFromToken(String token) {
@@ -145,11 +171,12 @@ public class JwtTokenProvider {
     }
 
     private Claims getClaimsFromToken(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
+        Claims cachedClaims = jwtClaimsCache.getIfPresent(token);
+        if (cachedClaims != null) {
+            return cachedClaims;
+        }
+        
+        return jwtClaimsCache.get(token, jwtUtils::parseToken);
     }
 
     private String generateTokenId() {
@@ -158,17 +185,31 @@ public class JwtTokenProvider {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
     }
 
-    //blackliste ekleme
-    public void invalidateToken(String token) {
-        if (blacklistService != null) {
-            blacklistService.blacklistToken(token);
-        }
+    // cache temizleme.
+    public void invalidateTokenFromCache(String token) {
+        jwtClaimsCache.invalidate(token);
+        jwtValidationCache.invalidate(token);
     }
 
-    //tüm tokenler geçersiz
-    public void invalidateUserTokens(String username) {
-        if (blacklistService != null) {
-            blacklistService.blacklistUserTokens(username);
-        }
+    public void invalidateUserFromCache(String username) {
+        userDetailsCache.invalidate(username);
+        // 
+    }
+    
+    public Map<String, Object> getCacheStats() {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("jwtClaimsCache", Map.of(
+            "size", jwtClaimsCache.estimatedSize(),
+            "stats", jwtClaimsCache.stats()
+        ));
+        stats.put("jwtValidationCache", Map.of(
+            "size", jwtValidationCache.estimatedSize(),
+            "stats", jwtValidationCache.stats()
+        ));
+        stats.put("userDetailsCache", Map.of(
+            "size", userDetailsCache.estimatedSize(),
+            "stats", userDetailsCache.stats()
+        ));
+        return stats;
     }
 }

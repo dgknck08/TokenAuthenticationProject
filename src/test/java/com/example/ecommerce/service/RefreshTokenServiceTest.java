@@ -27,7 +27,6 @@ class RefreshTokenServiceImplTest {
     @Mock
     private UserService userService;
 
-    @InjectMocks
     private RefreshTokenServiceImpl refreshTokenService;
 
     private final long refreshTokenDurationMs = 3600000L; // 1 saat

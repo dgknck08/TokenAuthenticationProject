@@ -14,6 +14,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.example.ecommerce.auth.exception.JwtValidationException;
+import com.example.ecommerce.auth.service.JwtValidationService;
 
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -27,25 +28,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String AUTHORIZATION_HEADER = "Authorization";
     
     private final JwtTokenProvider jwtTokenProvider;
+    private final JwtValidationService jwtValidationService;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, 
+                                   JwtValidationService jwtValidationService) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.jwtValidationService = jwtValidationService;
     }
 
     @Override
     public void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+                                HttpServletResponse response,
+                                FilterChain filterChain) throws ServletException, IOException {
         try {
             String token = getJwtFromRequest(request);
             
             if (StringUtils.hasText(token)) {
-                // Token validation - blacklist kontrolü dahil
-                if (jwtTokenProvider.validateToken(token)) {
+                //token validation (blacklist kontrolü dahil)
+                if (jwtValidationService.validateToken(token)) {
                     Authentication auth = jwtTokenProvider.getAuthentication(token);
                     SecurityContextHolder.getContext().setAuthentication(auth);
                     
-                    // Token ID'yi request attribute olarak ekle (audit için)
                     String tokenId = jwtTokenProvider.getTokenId(token);
                     request.setAttribute("tokenId", tokenId);
                     request.setAttribute("authenticatedUser", auth.getName());
