@@ -1,17 +1,17 @@
-# Build aşaması
 FROM eclipse-temurin:21-jdk-alpine as builder
 
 WORKDIR /app
 
-COPY mvnw .
-COPY .mvn .mvn
+RUN apk add --no-cache maven
+
 COPY pom.xml .
-RUN ./mvnw dependency:go-offline
+
+RUN mvn dependency:go-offline
 
 COPY src src
-RUN ./mvnw clean package -DskipTests
 
-# Çalıştırma aşaması
+RUN mvn clean package -DskipTests
+
 FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
