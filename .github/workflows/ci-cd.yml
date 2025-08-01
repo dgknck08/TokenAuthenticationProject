@@ -99,7 +99,7 @@ jobs:
           restore-keys: ${{ runner.os }}-m2
 
       - name: Build application
-        run: mvn clean package -DskipTests
+        run: mvn clean package -DskipTests -DskipGitCommitIdPlugin=true -DskipGitCommitIdPlugin=true
 
       - name: Run tests
         run: mvn test
@@ -163,7 +163,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}  
+          password: ${{ secrets.GITHUB_TOKEN }}  # PAT_TOKEN yerine GITHUB_TOKEN kullan
 
       - name: Extract metadata
         id: meta
@@ -223,3 +223,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
