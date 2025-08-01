@@ -65,15 +65,28 @@ public class AuthController {
             //başarılı giriş kaydı (Redis)
             accountLockoutService.recordLoginAttempt(username, true, null, request);
             
-            // Token metadata'sını Redis'e kaydet
+            // Token metadatasını Redise kaydeder
             String token = getTokenFromLoginResponse(loginResponse); // LoginResponse'dan token al
             if (token != null) {
                 String ipAddress = getClientIpAddress(request);
                 String userAgent = request.getHeader("User-Agent");
                 jwtBlacklistService.storeTokenMetadata(token, username, ipAddress, userAgent);
             }
-            
-            return ResponseEntity.ok(loginResponse);
+            // Refresh token -> cookie olarak ayarlar
+            ResponseCookie refreshTokenCookie = CookieUtil.createRefreshTokenCookie(loginResponse.refreshToken(), 7 * 24 * 60 * 60); 
+
+            // (JsonIgnore zaten engelliyor)
+            LoginResponse responseWithoutRefresh = new LoginResponse(
+                loginResponse.accessToken(),
+                null,
+                loginResponse.username(),
+                loginResponse.email()
+            );
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
+                    .body(responseWithoutRefresh);
+
             
         } catch (InvalidCredentialsException ex) {
             //başarısız giriş kaydı (Redis)
