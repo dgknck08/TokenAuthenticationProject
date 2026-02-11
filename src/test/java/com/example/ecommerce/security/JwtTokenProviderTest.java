@@ -8,7 +8,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
 
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.*;
@@ -46,23 +45,18 @@ class JwtTokenProviderTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
 
-        String strongKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-
         jwtTokenProvider = new JwtTokenProvider(
             userDetailsService,
             jwtUtils,
             jwtClaimsCache,
             jwtValidationCache,
             userDetailsCache,
-            strongKey,
             3600000,
             "ecommerce-app"
         );
 
-        // put() void döner, doNothing kullan
         doNothing().when(jwtClaimsCache).put(anyString(), any());
     }
-
 
     @Test
     void testGenerateTokenWithUsername_simple() {
@@ -70,7 +64,7 @@ class JwtTokenProviderTest {
 
         Claims claimsMock = mock(Claims.class);
         when(jwtUtils.parseToken(anyString())).thenReturn(claimsMock);
-        doNothing().when(jwtClaimsCache).put(anyString(), any()); 
+        doNothing().when(jwtClaimsCache).put(anyString(), any());
 
         String token = jwtTokenProvider.generateTokenWithUsername(username);
 

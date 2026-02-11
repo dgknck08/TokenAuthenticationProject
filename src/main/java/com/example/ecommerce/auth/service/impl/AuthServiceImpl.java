@@ -54,7 +54,10 @@ public class AuthServiceImpl implements AuthService{
         validateRegisterRequest(request);
         
         User user = userService.createUser(request);
-        String accessToken = jwtTokenProvider.generateTokenWithUsername(user.getUsername());
+        String accessToken = jwtTokenProvider.generateTokenWithUsername(
+            user.getUsername(),
+            user.getRoles().stream().map(r -> r.name()).toList()
+        );
         String refreshToken = refreshTokenService.createRefreshToken(user.getId()).getToken();
         
         logger.info("User registered successfully: {}", user.getUsername());
@@ -107,7 +110,10 @@ public class AuthServiceImpl implements AuthService{
             User user = userService.findByUsername(username)
                                    .orElseThrow(() -> new UserNotFoundException("User not found"));
             
-            String accessToken = jwtTokenProvider.generateTokenWithUsername(username);
+            String accessToken = jwtTokenProvider.generateTokenWithUsername(
+                username,
+                user.getRoles().stream().map(role -> role.name()).toList()
+            );
             
             logger.info("Token refreshed successfully for user: {}", username);
             return new RefreshTokenResponse(accessToken, refreshToken, user.getUsername(), user.getEmail());

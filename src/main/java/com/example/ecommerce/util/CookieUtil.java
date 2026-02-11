@@ -8,11 +8,13 @@ import java.util.Arrays;
 public class CookieUtil {
 
     private static final String COOKIE_NAME = "refreshToken";
+    private static final boolean COOKIE_SECURE =
+            Boolean.parseBoolean(System.getenv().getOrDefault("APP_COOKIE_SECURE", "true"));
 
     public static ResponseCookie createRefreshTokenCookie(String token, int maxAgeSeconds) {
         return ResponseCookie.from(COOKIE_NAME, token)
                 .httpOnly(true)
-                .secure(true)
+                .secure(COOKIE_SECURE)
                 .path("/")
                 .maxAge(maxAgeSeconds)
                 .sameSite("Strict")
@@ -22,7 +24,7 @@ public class CookieUtil {
     public static ResponseCookie deleteRefreshTokenCookie() {
         return ResponseCookie.from(COOKIE_NAME, "")
                 .httpOnly(true)
-                .secure(true)
+                .secure(COOKIE_SECURE)
                 .path("/")
                 .maxAge(0)
                 .sameSite("Strict")

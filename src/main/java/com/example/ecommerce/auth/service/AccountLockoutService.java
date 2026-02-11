@@ -207,7 +207,7 @@ public class AccountLockoutService {
     public int getFailedAttemptCount(String username) {
         String failedAttemptsKey = FAILED_ATTEMPTS_KEY + username;
         Object count = redisTemplate.opsForValue().get(failedAttemptsKey);
-        return count != null ? (Integer) count : 0;
+        return count != null ? ((Number) count).intValue() : 0;
     }
 
     private void checkSuspiciousActivity(String username, String ipAddress, String userAgent) {

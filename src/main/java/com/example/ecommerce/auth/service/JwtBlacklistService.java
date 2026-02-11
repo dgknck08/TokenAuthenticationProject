@@ -2,6 +2,8 @@ package com.example.ecommerce.auth.service;
 
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import com.example.ecommerce.auth.security.JwtUtils;
@@ -14,6 +16,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import org.springframework.scheduling.annotation.Scheduled;
 
 @Service
 public class JwtBlacklistService {
@@ -232,12 +235,20 @@ public class JwtBlacklistService {
     public Map<String, Long> getAllUserTokenStats() {
         try {
             Map<String, Long> stats = new HashMap<>();
-            
-            // USER_TOKENS_KEY pattern'ına uyan tüm key'leri bul
-            Set<String> keys = redisTemplate.keys(USER_TOKENS_KEY + "*");
-            
-            if (keys != null) {
-                for (String key : keys) {
+
+            ScanOptions options = ScanOptions.scanOptions()
+                .match(USER_TOKENS_KEY + "*")
+                .count(500)
+                .build();
+
+            try (Cursor<byte[]> cursor = redisTemplate.getConnectionFactory()
+                    .getConnection()
+                    .scan(options)) {
+                while (cursor.hasNext()) {
+                    String key = new String(cursor.next(), StandardCharsets.UTF_8);
+                    if (!key.startsWith(USER_TOKENS_KEY)) {
+                        continue;
+                    }
                     String username = key.substring(USER_TOKENS_KEY.length());
                     Long count = redisTemplate.opsForSet().size(key);
                     stats.put(username, count != null ? count : 0);
@@ -251,10 +262,44 @@ public class JwtBlacklistService {
         }
     }
 
+    @Scheduled(fixedRate = 3600000)
     public void cleanupExpiredMetadata() {
         try {
+            int deleted = 0;
+            ScanOptions options = ScanOptions.scanOptions()
+                .match(TOKEN_METADATA_KEY + "*")
+                .count(500)
+                .build();
 
-            logger.info("Cleanup expired metadata completed");
+            try (Cursor<byte[]> cursor = redisTemplate.getConnectionFactory()
+                    .getConnection()
+                    .scan(options)) {
+                while (cursor.hasNext()) {
+                    String key = new String(cursor.next(), StandardCharsets.UTF_8);
+                    Map<Object, Object> raw = redisTemplate.opsForHash().entries(key);
+                    Object tokenObj = raw.get("token");
+                    if (tokenObj == null) {
+                        redisTemplate.delete(key);
+                        deleted++;
+                        continue;
+                    }
+
+                    String token = tokenObj.toString();
+                    try {
+                        Instant expiration = jwtUtils.getExpirationDate(token);
+                        if (expiration.isBefore(Instant.now()) || isTokenBlacklisted(token)) {
+                            redisTemplate.delete(key);
+                            deleted++;
+                        }
+                    } catch (Exception e) {
+                        // Token parse edilemiyorsa metadata'yı temizle
+                        redisTemplate.delete(key);
+                        deleted++;
+                    }
+                }
+            }
+
+            logger.info("Cleanup expired metadata completed. Deleted: {}", deleted);
         } catch (Exception e) {
             logger.error("Error during metadata cleanup: {}", e.getMessage());
         }

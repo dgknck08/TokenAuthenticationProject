@@ -8,7 +8,8 @@ import com.example.ecommerce.auth.service.AccountLockoutService;
 import com.example.ecommerce.auth.service.AuthService;
 import com.example.ecommerce.auth.service.JwtBlacklistService;
 import com.example.ecommerce.auth.service.JwtValidationService;
-import com.example.ecommerce.auth.security.SecurityConfig;
+import com.example.ecommerce.auth.service.RefreshTokenService;
+import com.example.ecommerce.auth.service.UserService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +44,12 @@ public class AuthControllerTest {
 
     @Mock
     private JwtValidationService jwtValidationService;
+
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
+    @Mock
+    private UserService userService;
 
     @InjectMocks
     private AuthController authController;

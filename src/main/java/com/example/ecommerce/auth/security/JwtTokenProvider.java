@@ -1,7 +1,7 @@
 package com.example.ecommerce.auth.security;
 
 import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.Keys;
+
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -15,8 +15,6 @@ import org.springframework.stereotype.Component;
 import com.example.ecommerce.auth.exception.JwtValidationException;
 import com.github.benmanes.caffeine.cache.Cache;
 
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -28,7 +26,6 @@ public class JwtTokenProvider {
     
     private final UserDetailsService userDetailsService;
     private final JwtUtils jwtUtils;
-    private final String jwtSecret;
     private final int jwtExpirationMs;
     private final String issuer;
     private final SecureRandom secureRandom;
@@ -43,12 +40,10 @@ public class JwtTokenProvider {
             @Qualifier("jwtClaimsCache") Cache<String, Claims> jwtClaimsCache,
             @Qualifier("jwtValidationCache") Cache<String, Boolean> jwtValidationCache,
             @Qualifier("userDetailsCache") Cache<String, UserDetails> userDetailsCache,
-            @Value("${app.jwtSecret}") String jwtSecret,
             @Value("${app.jwtExpirationMs}") int jwtExpirationMs,
             @Value("${app.jwtIssuer:ecommerce-app}") String issuer) {
 this.userDetailsService = userDetailsService;
 this.jwtUtils = jwtUtils;
-this.jwtSecret = jwtSecret;
 this.jwtExpirationMs = jwtExpirationMs;
 this.issuer = issuer;
 this.secureRandom = new SecureRandom();
@@ -57,10 +52,6 @@ this.jwtClaimsCache = jwtClaimsCache;
 this.jwtValidationCache = jwtValidationCache;
 this.userDetailsCache = userDetailsCache;
 }
-
-    private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
-    }
 
     public String generateTokenWithUsername(String username) {
         return generateTokenWithUsername(username, List.of());
@@ -83,7 +74,7 @@ this.userDetailsCache = userDetailsCache;
                 .setIssuedAt(Date.from(now))
                 .setExpiration(Date.from(expiryDate))
                 .setNotBefore(Date.from(now))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS512)
+                .signWith(jwtUtils.getSigningKey(), SignatureAlgorithm.HS512)
                 .compact();
         
         // cache içine ekleniyor.
@@ -194,6 +185,12 @@ this.userDetailsCache = userDetailsCache;
     public void invalidateUserFromCache(String username) {
         userDetailsCache.invalidate(username);
         // 
+    }
+
+    public void invalidateAllCaches() {
+        jwtClaimsCache.invalidateAll();
+        jwtValidationCache.invalidateAll();
+        userDetailsCache.invalidateAll();
     }
     
     public Map<String, Object> getCacheStats() {

@@ -14,10 +14,12 @@ import java.util.Map;
 @PreAuthorize("hasRole('ADMIN')")
 public class CacheManagementController {
 	
-	private JwtValidationService jwtValidationService;
+    private final JwtValidationService jwtValidationService;
     private final JwtTokenProvider jwtTokenProvider;
 
-    public CacheManagementController(JwtTokenProvider jwtTokenProvider) {
+    public CacheManagementController(JwtValidationService jwtValidationService,
+                                     JwtTokenProvider jwtTokenProvider) {
+        this.jwtValidationService = jwtValidationService;
         this.jwtTokenProvider = jwtTokenProvider;
     }
 
@@ -35,6 +37,7 @@ public class CacheManagementController {
 
     @PostMapping("/clear/all")
     public ResponseEntity<Map<String, String>> clearAllCaches() {
+        jwtTokenProvider.invalidateAllCaches();
         return ResponseEntity.ok(Map.of("message", "All caches cleared"));
     }
 }

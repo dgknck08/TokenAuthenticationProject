@@ -1,52 +1,61 @@
 package com.example.ecommerce.auth.security;
 
-import java.util.Arrays;
-import java.util.List;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
 
 import com.example.ecommerce.auth.service.JwtValidationService;
 
 @Configuration
+@EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private static final List<String> SWAGGER_ENDPOINTS = List.of(
-        "/swagger-ui/**",
-        "/v3/api-docs/**", 	
-        "/swagger-ui.html",
-        "/webjars/**"
-    );
-
-    private final CustomUserDetailsService userDetailsService;
     private final JwtTokenProvider jwtTokenProvider;
-    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
-    private final Environment env;
     private final JwtValidationService jwtValidationService;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
-    public SecurityConfig(CustomUserDetailsService userDetailsService,
-                          JwtTokenProvider jwtTokenProvider,
-                          JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint, 
-                          Environment env, JwtValidationService jwtValidationService) {
-        this.userDetailsService = userDetailsService;
+    public SecurityConfig(JwtTokenProvider jwtTokenProvider,
+                          JwtValidationService jwtValidationService,
+                          JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.jwtValidationService = jwtValidationService;
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
-        this.jwtValidationService=jwtValidationService;
-        this.env = env;
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh-token").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
+                .requestMatchers("/api/cart/**").permitAll()
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
     }
 
     @Bean
@@ -55,47 +64,31 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http
-            .csrf(AbstractHttpConfigurer::disable)
-            .exceptionHandling(exception -> exception
-                .authenticationEntryPoint(jwtAuthenticationEntryPoint)
-            )
-            .authorizeHttpRequests(auth -> {
-                // Java 21 pattern matching ve modern syntax
-                var activeProfiles = Arrays.asList(env.getActiveProfiles());
-                
-                if (activeProfiles.contains("dev")) {
-                    auth.requestMatchers(SWAGGER_ENDPOINTS.toArray(String[]::new))
-                        .permitAll();
-                }
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList(
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://frontend" // Docker frontend
+        ));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type", "Set-Cookie"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
 
-                auth.requestMatchers("/api/auth/**").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
-                    .requestMatchers("/api/admin/products/**").hasRole("ADMIN")
-                    .requestMatchers("/api/profile/**").authenticated()
-                    .anyRequest().authenticated();
-            })
-            .authenticationProvider(authenticationProvider())
-            .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
-            .build();
-    }
-
-    @Bean
-    public AuthenticationProvider authenticationProvider() {
-        var authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
-        return authProvider;
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }

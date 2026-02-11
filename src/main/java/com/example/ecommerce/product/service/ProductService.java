@@ -40,6 +40,20 @@ public class ProductService {
         return ProductMapper.toDto(savedProduct);
     }
 
+    public ProductDto updateProduct(Long id, ProductDto productDto) {
+        Product existing = productRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException("Product not found with id " + id));
+
+        existing.setName(productDto.getName());
+        existing.setDescription(productDto.getDescription());
+        existing.setPrice(productDto.getPrice());
+        existing.setImageUrl(productDto.getImageUrl());
+        existing.setCategory(productDto.getCategory());
+
+        Product updatedProduct = productRepository.save(existing);
+        return ProductMapper.toDto(updatedProduct);
+    }
+
     public void deleteProduct(Long id) {
         Product product = productRepository.findById(id)
             .orElseThrow(() -> new ProductNotFoundException("Product not found with id " + id));

@@ -77,6 +77,11 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         refreshTokenRepository.deleteByUserId(userId);
     }
 
+    @Override
+    public void deleteByToken(String token) {
+        refreshTokenRepository.deleteByToken(token);
+    }
+
     @Scheduled(fixedRate = 3600000) 
     @Override
     public void deleteExpiredTokens() {

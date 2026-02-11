@@ -1,11 +1,15 @@
 package com.example.ecommerce.auth.controller;
 
 import com.example.ecommerce.auth.dto.*;
+
 import com.example.ecommerce.auth.exception.InvalidCredentialsException;
+import com.example.ecommerce.auth.handler.AuthResponseHandler;
 import com.example.ecommerce.auth.service.AccountLockoutService;
 import com.example.ecommerce.auth.service.AuthService;
 import com.example.ecommerce.auth.service.JwtBlacklistService;
 import com.example.ecommerce.auth.service.JwtValidationService;
+import com.example.ecommerce.auth.service.RefreshTokenService;
+import com.example.ecommerce.auth.service.UserService;
 import com.example.ecommerce.auth.security.JwtTokenProvider;
 import com.example.ecommerce.util.CookieUtil;
 
@@ -17,6 +21,7 @@ import java.util.Map;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,73 +30,58 @@ import org.springframework.web.bind.annotation.*;
 @Validated
 public class AuthController {
 
-    private final AuthService authService;
+	private final AuthService authService;
     private final JwtTokenProvider jwtTokenProvider;
     private final AccountLockoutService accountLockoutService;
     private final JwtBlacklistService jwtBlacklistService;
-	private JwtValidationService jwtValidationService;
+    private final JwtValidationService jwtValidationService;
+    private final RefreshTokenService refreshTokenService;
+    private final UserService userService;
 
-    public AuthController(AuthService authService, 
-                         JwtTokenProvider jwtTokenProvider, 
-                         AccountLockoutService accountLockoutService,
-                         JwtBlacklistService jwtBlacklistService) {
+    public AuthController(AuthService authService,
+                          JwtTokenProvider jwtTokenProvider,
+                          AccountLockoutService accountLockoutService,
+                          JwtBlacklistService jwtBlacklistService,
+                          JwtValidationService jwtValidationService,
+                          RefreshTokenService refreshTokenService,
+                          UserService userService) {
         this.authService = authService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.accountLockoutService = accountLockoutService;
         this.jwtBlacklistService = jwtBlacklistService;
+        this.jwtValidationService = jwtValidationService;
+        this.refreshTokenService = refreshTokenService;
+        this.userService = userService;
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest, HttpServletRequest request) {
-    	String username = loginRequest.username();
-        
-        //hesap kilitli mi ? kontrolü (redis impl => AccountLockoutService)
+        String username = loginRequest.username();
+
         if (accountLockoutService.isAccountLocked(username)) {
             Map<String, Object> lockInfo = accountLockoutService.getAccountLockInfo(username);
             String message = "Account is locked. Please try again later.";
-            
             if (lockInfo != null && lockInfo.containsKey("lockedUntil")) {
                 message += " Locked until: " + lockInfo.get("lockedUntil");
             }
-            
-            return ResponseEntity.status(HttpStatus.LOCKED)
-                    .body(new LoginErrorResponse(message));
+            return ResponseEntity.status(HttpStatus.LOCKED).body(new LoginErrorResponse(message));
         }
 
         try {
-            //giriş işlemi
             LoginResponse loginResponse = authService.login(loginRequest);
-            
-            //başarılı giriş kaydı (Redis)
             accountLockoutService.recordLoginAttempt(username, true, null, request);
-            
-            // Token metadatasını Redise kaydeder
-            String token = getTokenFromLoginResponse(loginResponse); // LoginResponse'dan token al
+
+            String token = loginResponse.accessToken();
             if (token != null) {
                 String ipAddress = getClientIpAddress(request);
                 String userAgent = request.getHeader("User-Agent");
                 jwtBlacklistService.storeTokenMetadata(token, username, ipAddress, userAgent);
             }
-            // Refresh token -> cookie olarak ayarlar
-            ResponseCookie refreshTokenCookie = CookieUtil.createRefreshTokenCookie(loginResponse.refreshToken(), 7 * 24 * 60 * 60); 
 
-            // (JsonIgnore zaten engelliyor)
-            LoginResponse responseWithoutRefresh = new LoginResponse(
-                loginResponse.accessToken(),
-                null,
-                loginResponse.username(),
-                loginResponse.email()
-            );
+            return AuthResponseHandler.handleLogin(loginResponse);
 
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
-                    .body(responseWithoutRefresh);
-
-            
         } catch (InvalidCredentialsException ex) {
-            //başarısız giriş kaydı (Redis)
-        	accountLockoutService.recordLoginAttempt(username, false, ex.getMessage(), request);
-
+            accountLockoutService.recordLoginAttempt(username, false, ex.getMessage(), request);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new LoginErrorResponse("Invalid username or password"));
         }
@@ -100,36 +90,49 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest registerRequest) {
         RegisterResponse registerResponse = authService.register(registerRequest);
-        return ResponseEntity.ok(registerResponse);
+        return AuthResponseHandler.handleRegister(registerResponse);
     }
 
     @PostMapping("/refresh-token")
     public ResponseEntity<RefreshTokenResponse> refreshToken(HttpServletRequest request) {
         String refreshToken = CookieUtil.getRefreshTokenFromCookie(request);
         RefreshTokenResponse refreshTokenResponse = authService.refreshToken(refreshToken);
-        return ResponseEntity.ok(refreshTokenResponse);
+        return AuthResponseHandler.handleRefreshTokenResponse(refreshTokenResponse);
     }
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletRequest request) {
         String token = getTokenFromRequest(request);
+        String refreshToken = CookieUtil.getRefreshTokenFromCookie(request);
         if (token != null) {
-            // Redis blacklistee ekle
-        	jwtBlacklistService.blacklistToken(token);
+            jwtBlacklistService.blacklistToken(token);
+            try {
+                Long userId = jwtValidationService.getUserIdFromToken(token);
+                refreshTokenService.deleteByUserId(userId);
+            } catch (Exception ignored) {
+                // Token geçersizse refresh token silme atlanır
+            }
         }
-        return ResponseEntity.ok().build();
+        if (refreshToken != null) {
+            refreshTokenService.deleteByToken(refreshToken);
+        }
+        return AuthResponseHandler.handleLogout();
     }
 
     @PostMapping("/logout-all")
     public ResponseEntity<Void> logoutAll() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated()) {
-            //kullanıcının tüm tokenlerini Redis blackliste ekler
-        	jwtBlacklistService.blacklistUserTokens(auth.getName());
+            jwtBlacklistService.blacklistUserTokens(auth.getName());
+            try {
+                userService.findByUsername(auth.getName())
+                    .ifPresent(user -> refreshTokenService.deleteByUserId(user.getId()));
+            } catch (Exception ignored) {
+                // Kullanıcı id bulunamazsa refresh token silme atlanır
+            }
         }
-        return ResponseEntity.ok().build();
+        return AuthResponseHandler.handleLogout(); // refresh tokenı da sil
     }
-
     @PostMapping("/verify-token")
     public ResponseEntity<Map<String, Object>> verifyToken(HttpServletRequest request) {
         String token = getTokenFromRequest(request);
@@ -137,17 +140,15 @@ public class AuthController {
             try {
                 boolean isValid = jwtValidationService.validateToken(token);
                 String username = jwtTokenProvider.getUsernameFromToken(token);
-                
-                //Token metadata bilgilerini ekle
                 Map<String, Object> tokenMetadata = jwtBlacklistService.getTokenMetadata(token);
-                
+
                 Map<String, Object> response = Map.of(
                         "valid", isValid,
                         "username", username,
                         "roles", jwtTokenProvider.getRolesFromToken(token),
                         "metadata", tokenMetadata != null ? tokenMetadata : Map.of()
                 );
-                
+
                 return ResponseEntity.ok(response);
             } catch (Exception e) {
                 return ResponseEntity.ok(Map.of("valid", false, "error", e.getMessage()));
@@ -155,26 +156,28 @@ public class AuthController {
         }
         return ResponseEntity.badRequest().body(Map.of("valid", false, "error", "No token provided"));
     }
-    
+
     @GetMapping("/account-status/{username}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> getAccountStatus(@PathVariable String username) {
         boolean isLocked = accountLockoutService.isAccountLocked(username);
         int failedAttempts = accountLockoutService.getFailedAttemptCount(username);
         Map<String, Object> lockInfo = accountLockoutService.getAccountLockInfo(username);
-        
+
         Map<String, Object> status = Map.of(
-            "username", username,
-            "locked", isLocked,
-            "failedAttempts", failedAttempts,
-            "lockInfo", lockInfo != null ? lockInfo : Map.of()
+                "username", username,
+                "locked", isLocked,
+                "failedAttempts", failedAttempts,
+                "lockInfo", lockInfo != null ? lockInfo : Map.of()
         );
-        
+
         return ResponseEntity.ok(status);
     }
-    
+
     @PostMapping("/unlock-account/{username}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, String>> unlockAccount(@PathVariable String username) {
-    	accountLockoutService.unlockAccount(username);
+        accountLockoutService.unlockAccount(username);
         return ResponseEntity.ok(Map.of("message", "Account unlocked successfully"));
     }
 
@@ -193,8 +196,5 @@ public class AuthController {
         }
         return xfHeader.split(",")[0];
     }
-
-    private String getTokenFromLoginResponse(LoginResponse response) {
-        return response.accessToken(); //accessToken() methodunu kullanarak token alma işlemi
-    }
+	
 }

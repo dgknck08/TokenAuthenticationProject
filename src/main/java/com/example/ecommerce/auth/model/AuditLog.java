@@ -1,6 +1,7 @@
 package com.example.ecommerce.auth.model;
 
 import java.time.Instant;
+
 import jakarta.persistence.Table;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -20,11 +21,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "audit_logs", indexes = {
-    @Index(name = "idx_user_id", columnList = "userId"),
-    @Index(name = "idx_action", columnList = "action"),
-    @Index(name = "idx_created_at", columnList = "createdAt")
-})
+@Table(name = "audit_logs")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -32,35 +29,35 @@ import lombok.NoArgsConstructor;
 @EntityListeners(AuditingEntityListener.class)
 public class AuditLog {
     
-    @Id
+	@Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     private Long userId;
-    
+
     @Column(length = 50)
     private String username;
-    
+
     @Column(nullable = false, length = 50)
     @Enumerated(EnumType.STRING)
     private AuditAction action;
-    
+
     @Column(length = 255)
     private String description;
-    
+
     @Column(length = 45)
     private String ipAddress;
-    
+
     @Column(length = 500)
     private String userAgent;
-    
+
     @Column(columnDefinition = "TEXT")
-    private String details; // JSON format 
-    
+    private String details;
+
     @CreatedDate
     @Column(nullable = false)
     private Instant createdAt;
-    
+
     public enum AuditAction {
         USER_REGISTRATION,
         USER_LOGIN_SUCCESS,
@@ -75,4 +72,5 @@ public class AuditLog {
         EMAIL_VERIFICATION,
         SUSPICIOUS_ACTIVITY
     }
+
 }

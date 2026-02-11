@@ -1,6 +1,8 @@
 package com.example.ecommerce.auth.model;
 
+
 import jakarta.persistence.*;
+
 import lombok.*;
 import java.time.Instant;
 import java.util.HashSet;
@@ -9,27 +11,24 @@ import com.example.ecommerce.auth.enums.Role;
 import com.example.ecommerce.cart.model.Cart;
 
 @Entity
-@Table(name = "users", indexes = {
-    @Index(name = "idx_username", columnList = "username"),
-    @Index(name = "idx_email", columnList = "email")
-})
+@Table(name = "users")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class User {
     
-    @Id
+	@Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false, length = 50)
+    @Column(nullable = false, length = 50, unique = true)
     private String username;
 
     @Column(nullable = false)
     private String password;
 
-    @Column(unique = true, length = 100)
+    @Column(length = 100, unique = true)
     private String email;
 
     @Column(length = 50)
@@ -41,17 +40,16 @@ public class User {
     @Builder.Default
     private boolean enabled = true;
 
-    //Account Lockout
     @Builder.Default
     private boolean accountLocked = false;
-    
+
     private Instant lockedUntil;
-    
+
     @Builder.Default
     private int failedLoginAttempts = 0;
-    
+
     private Instant lastFailedLogin;
-    
+
     private Instant lastSuccessfulLogin;
 
     @ElementCollection(fetch = FetchType.EAGER)
