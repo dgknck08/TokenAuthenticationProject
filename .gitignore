@@ -1,55 +1,36 @@
-HELP.md
-target/
-!.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
-
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
-
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### VS Code ###
-.vscode/
-# Gizli konfigürasyon dosyaları
-config.properties
-application.yml
+# Secrets
 .env
-application.properties
-application-test.properties
-# Derleme çıktı klasörleri
-target/
-bin/
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
 
-# IDE dosyaları
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+coverage/
+backend/target/
+backend/bin/
+
+# Logs
+*.log
+*.log.*
+logs/
+backend/logs/
+
+# Java / IDE
+.classpath
+.project
+.settings/
 .idea/
 *.iml
 .vscode/
 
-# Log dosyaları
-*.log
-
-# OS sistem dosyaları
+# OS
 .DS_Store
 Thumbs.db
-
