@@ -7,7 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Entity
-@Table(name = "refresh_tokens", indexes = @Index(name = "idx_token", columnList = "token"))
+@Table(name = "refresh_tokens", indexes = @Index(name = "idx_token_hash", columnList = "token_hash"))
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,8 +17,8 @@ public class RefreshToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
-    private String token;
+    @Column(name = "token_hash", unique = true, nullable = false)
+    private String tokenHash;
 
     @Column(nullable = false)
     private Instant expiryDate;
@@ -27,8 +27,8 @@ public class RefreshToken {
     @JoinColumn(name = "user_id")
     private User user;
 
-    public RefreshToken(String token, User user, Instant expiryDate) {
-        this.token = token;
+    public RefreshToken(String tokenHash, User user, Instant expiryDate) {
+        this.tokenHash = tokenHash;
         this.user = user;
         this.expiryDate = expiryDate;
     }
