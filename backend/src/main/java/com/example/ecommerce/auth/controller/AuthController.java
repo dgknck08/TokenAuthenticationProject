@@ -11,6 +11,7 @@ import com.example.ecommerce.auth.service.JwtValidationService;
 import com.example.ecommerce.auth.service.RefreshTokenService;
 import com.example.ecommerce.auth.service.UserService;
 import com.example.ecommerce.auth.security.JwtTokenProvider;
+import com.example.ecommerce.common.api.ApiErrorResponse;
 import com.example.ecommerce.util.CookieUtil;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -64,7 +65,8 @@ public class AuthController {
             if (lockInfo != null && lockInfo.containsKey("lockedUntil")) {
                 message += " Locked until: " + lockInfo.get("lockedUntil");
             }
-            return ResponseEntity.status(HttpStatus.LOCKED).body(new LoginErrorResponse(message));
+            return ResponseEntity.status(HttpStatus.LOCKED)
+                    .body(ApiErrorResponse.of("ACCOUNT_LOCKED", message, request.getRequestURI()));
         }
 
         try {
@@ -83,7 +85,7 @@ public class AuthController {
         } catch (InvalidCredentialsException ex) {
             accountLockoutService.recordLoginAttempt(username, false, ex.getMessage(), request);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new LoginErrorResponse("Invalid username or password"));
+                    .body(ApiErrorResponse.of("INVALID_CREDENTIALS", "Invalid username or password", request.getRequestURI()));
         }
     }
 

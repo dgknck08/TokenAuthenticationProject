@@ -17,6 +17,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.example.ecommerce.auth.exception.JwtValidationException;
 import com.example.ecommerce.auth.service.JwtValidationService;
+import com.example.ecommerce.common.api.ApiErrorResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -26,6 +28,7 @@ import io.jsonwebtoken.security.SignatureException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final List<String> ALLOWED_ORIGINS = List.of(
@@ -142,11 +145,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         response.setStatus(status);
         response.setContentType("application/json;charset=UTF-8");
 
-        String json = String.format(
-            "{\"error\": \"%s\", \"timestamp\": \"%s\", \"status\": %d}",
-            message,
-            java.time.Instant.now().toString(),
-            status
+        String code = switch (status) {
+            case HttpServletResponse.SC_UNAUTHORIZED -> "UNAUTHORIZED";
+            case HttpServletResponse.SC_FORBIDDEN -> "ACCESS_DENIED";
+            case HttpServletResponse.SC_BAD_REQUEST -> "BAD_REQUEST";
+            case HttpServletResponse.SC_INTERNAL_SERVER_ERROR -> "INTERNAL_SERVER_ERROR";
+            default -> "REQUEST_FAILED";
+        };
+        String json = OBJECT_MAPPER.writeValueAsString(
+                ApiErrorResponse.of(code, message, request.getRequestURI())
         );
         response.getWriter().write(json);
     }

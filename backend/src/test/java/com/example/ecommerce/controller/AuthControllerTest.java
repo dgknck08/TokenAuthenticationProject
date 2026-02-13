@@ -133,7 +133,10 @@ public class AuthControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginJson))
             .andExpect(status().isLocked())
-            .andExpect(jsonPath("$.message").exists());
+            .andExpect(jsonPath("$.code").value("ACCOUNT_LOCKED"))
+            .andExpect(jsonPath("$.message").exists())
+            .andExpect(jsonPath("$.timestamp").exists())
+            .andExpect(jsonPath("$.path").value("/api/auth/login"));
     }
 
     @Test
@@ -152,6 +155,9 @@ public class AuthControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginJson))
             .andExpect(status().isUnauthorized())
-            .andExpect(jsonPath("$.message").value("Invalid username or password"));
+            .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"))
+            .andExpect(jsonPath("$.message").value("Invalid username or password"))
+            .andExpect(jsonPath("$.timestamp").exists())
+            .andExpect(jsonPath("$.path").value("/api/auth/login"));
     }
 }
