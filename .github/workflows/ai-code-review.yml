@@ -14,6 +14,10 @@ on:
         required: true
         default: "true"
 
+concurrency:
+  group: review-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ai-code-review:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
@@ -24,6 +28,7 @@ jobs:
       contents: read
       pull-requests: write
       issues: write
+    timeout-minutes: 15
     
     steps:
     - name: Checkout code
@@ -69,6 +74,7 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     name: SonarCloud PR Analysis
+    timeout-minutes: 20
     
     steps:
     - name: Checkout code
@@ -81,6 +87,8 @@ jobs:
       with:
         java-version: '21'
         distribution: 'temurin'
+        cache: maven
+        cache-dependency-path: backend/pom.xml
 
     - name: Cache SonarCloud packages
       uses: actions/cache@v3
@@ -88,13 +96,6 @@ jobs:
         path: ~/.sonar/cache
         key: ${{ runner.os }}-sonar
         restore-keys: ${{ runner.os }}-sonar
-
-    - name: Cache Maven dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('backend/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2
 
     - name: Build and analyze PR
       env:
@@ -113,6 +114,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.run_manual_sonar == 'true'
     runs-on: ubuntu-latest
     name: SonarCloud Manual Analysis
+    timeout-minutes: 20
 
     steps:
     - name: Checkout code
@@ -125,6 +127,8 @@ jobs:
       with:
         java-version: '21'
         distribution: 'temurin'
+        cache: maven
+        cache-dependency-path: backend/pom.xml
 
     - name: Cache SonarCloud packages
       uses: actions/cache@v4
@@ -132,13 +136,6 @@ jobs:
         path: ~/.sonar/cache
         key: ${{ runner.os }}-sonar
         restore-keys: ${{ runner.os }}-sonar
-
-    - name: Cache Maven dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('backend/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2
 
     - name: Build and analyze branch
       env:
