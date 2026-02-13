@@ -4,7 +4,6 @@ package com.example.ecommerce.service;
 import com.example.ecommerce.auth.dto.LoginRequest;
 import com.example.ecommerce.auth.dto.LoginResponse;
 import com.example.ecommerce.auth.exception.InvalidCredentialsException;
-import com.example.ecommerce.auth.model.RefreshToken;
 import com.example.ecommerce.auth.model.User;
 import com.example.ecommerce.auth.security.JwtTokenProvider;
 import com.example.ecommerce.auth.service.RefreshTokenService;
@@ -58,14 +57,11 @@ class AuthServiceLoginTest {
         user.setUsername(username);
         user.setEmail(email);
 
-        RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setToken(refreshTokenStr);
-
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authentication);
         when(jwtTokenProvider.generateToken(authentication)).thenReturn(accessToken);
         when(userService.findByUsername(username)).thenReturn(Optional.of(user));
-        when(refreshTokenService.createRefreshToken(1L)).thenReturn(refreshToken);
+        when(refreshTokenService.createRefreshToken(1L)).thenReturn(refreshTokenStr);
 
         LoginResponse response = authService.login(request);
 
@@ -179,14 +175,11 @@ class AuthServiceLoginTest {
         user.setUsername(username);
         user.setEmail("test@example.com");
 
-        RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setToken("refresh-token");
-
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authentication);
         when(jwtTokenProvider.generateToken(authentication)).thenReturn("access-token");
         when(userService.findByUsername(username)).thenReturn(Optional.of(user));
-        when(refreshTokenService.createRefreshToken(1L)).thenReturn(refreshToken);
+        when(refreshTokenService.createRefreshToken(1L)).thenReturn("refresh-token");
 
 
         authService.login(request);

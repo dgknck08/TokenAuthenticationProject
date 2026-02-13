@@ -44,12 +44,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         "/api/auth/refresh-token"
     );
 
-    // Token yokken de erişilebilen endpointler (guest destekli)
-    private static final List<String> OPTIONAL_AUTH_ENDPOINTS = List.of(
-        "/api/cart",
-        "/api/products"
-    );
-
     public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, 
                                    JwtValidationService jwtValidationService) {
         this.jwtTokenProvider = jwtTokenProvider;
@@ -90,14 +84,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     request.setAttribute("authenticatedUser", auth.getName());
                 }
             } else {
-                // Token yoksa ama guest endpointse devam et
-                boolean isOptional = OPTIONAL_AUTH_ENDPOINTS.stream().anyMatch(path::startsWith);
-                if (path.startsWith("/api/products") && !"GET".equalsIgnoreCase(request.getMethod())) {
-                    isOptional = false;
-                }
-                if (path.startsWith("/api/cart/merge")) {
-                    isOptional = false;
-                }
+                // Sadece public read endpointleri token olmadan geç
+                boolean isOptional =
+                    ("GET".equalsIgnoreCase(request.getMethod()) && path.startsWith("/api/products"))
+                        || ("GET".equalsIgnoreCase(request.getMethod()) && path.startsWith("/api/cart"));
                 if (isOptional) {
                     filterChain.doFilter(request, response);
                     return;

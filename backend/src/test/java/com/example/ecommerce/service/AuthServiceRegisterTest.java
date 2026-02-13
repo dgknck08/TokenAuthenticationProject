@@ -22,7 +22,6 @@ import com.example.ecommerce.auth.dto.RegisterRequest;
 import com.example.ecommerce.auth.dto.RegisterResponse;
 import com.example.ecommerce.auth.enums.Role;
 import com.example.ecommerce.auth.exception.UserAlreadyExistsException;
-import com.example.ecommerce.auth.model.RefreshToken;
 import com.example.ecommerce.auth.model.User;
 import com.example.ecommerce.auth.security.JwtTokenProvider;
 import com.example.ecommerce.auth.service.RefreshTokenService;
@@ -67,15 +66,11 @@ public class AuthServiceRegisterTest {
         String fakeAccessToken = "access-token";
         String fakeRefreshToken = "refresh-token";
 
-        RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setToken(fakeRefreshToken);
-
-
         when(userService.findByUsername(username)).thenReturn(Optional.empty());
         when(userService.findByEmail(email)).thenReturn(Optional.empty());
         when(userService.createUser(registerRequest)).thenReturn(mockUser);
         when(jwtTokenProvider.generateTokenWithUsername(eq(username), anyList())).thenReturn(fakeAccessToken);
-        when(refreshTokenService.createRefreshToken(mockUser.getId())).thenReturn(refreshToken);
+        when(refreshTokenService.createRefreshToken(mockUser.getId())).thenReturn(fakeRefreshToken);
 
 
         RegisterResponse response = authService.register(registerRequest);
@@ -189,14 +184,11 @@ public class AuthServiceRegisterTest {
         mockUser.setEmail("new@example.com");
         mockUser.setRoles(Set.of(Role.ROLE_USER));
 
-        RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setToken("refresh-token");
-
         when(userService.findByUsername("newuser")).thenReturn(Optional.empty());
         when(userService.findByEmail("new@example.com")).thenReturn(Optional.empty());
         when(userService.createUser(request)).thenReturn(mockUser);
         when(jwtTokenProvider.generateTokenWithUsername(eq("newuser"), anyList())).thenReturn("access-token");
-        when(refreshTokenService.createRefreshToken(1L)).thenReturn(refreshToken);
+        when(refreshTokenService.createRefreshToken(1L)).thenReturn("refresh-token");
 
 
         authService.register(request);

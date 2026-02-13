@@ -58,7 +58,7 @@ public class AuthServiceImpl implements AuthService{
             user.getUsername(),
             user.getRoles().stream().map(r -> r.name()).toList()
         );
-        String refreshToken = refreshTokenService.createRefreshToken(user.getId()).getToken();
+        String refreshToken = refreshTokenService.createRefreshToken(user.getId());
         
         logger.info("User registered successfully: {}", user.getUsername());
         return new RegisterResponse(accessToken, refreshToken, user.getUsername(), user.getEmail());
@@ -85,7 +85,7 @@ public class AuthServiceImpl implements AuthService{
             User user = userService.findByUsername(request.username())
                                    .orElseThrow(() -> new InvalidCredentialsException("Invalid username or password"));
             
-            String refreshToken = refreshTokenService.createRefreshToken(user.getId()).getToken();
+            String refreshToken = refreshTokenService.createRefreshToken(user.getId());
             
             logger.info("User logged in successfully: {}", user.getUsername());
             return new LoginResponse(accessToken, refreshToken, user.getUsername(), user.getEmail());

@@ -15,14 +15,19 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.Instant;
-import java.util.UUID;
+import java.util.Base64;
 
 @Service
 @Transactional
 public class RefreshTokenServiceImpl implements RefreshTokenService {
     
     private static final Logger logger = LoggerFactory.getLogger(RefreshTokenServiceImpl.class);
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserService userService;
@@ -39,29 +44,33 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     
     //register durumlarinda.
     @Override
-    public RefreshToken createRefreshToken(Long userId) {
+    public String createRefreshToken(Long userId) {
         User user = userService.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
         
         refreshTokenRepository.deleteByUserId(userId);
+
+        String rawToken = generateRefreshToken();
+        String tokenHash = hashToken(rawToken);
         
         RefreshToken refreshToken = new RefreshToken(
-                UUID.randomUUID().toString(),
+                tokenHash,
                 user,
                 Instant.now().plusMillis(refreshTokenDurationMs)
         );
         
-        RefreshToken saved = refreshTokenRepository.save(refreshToken);
+        refreshTokenRepository.save(refreshToken);
         logger.info("Created new refresh token for user: {}", user.getUsername());
         
-        return saved;
+        return rawToken;
     }
 
     
     //refresh token expired durumlarinda.
     @Override
     public String validateRefreshToken(String token) {
-        RefreshToken refreshToken = refreshTokenRepository.findByToken(token)
+        String tokenHash = hashToken(token);
+        RefreshToken refreshToken = refreshTokenRepository.findByTokenHash(tokenHash)
                 .orElseThrow(() -> new TokenRefreshException("Refresh token not found"));
         
         if (refreshToken.isExpired()) {
@@ -79,7 +88,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
     @Override
     public void deleteByToken(String token) {
-        refreshTokenRepository.deleteByToken(token);
+        refreshTokenRepository.deleteByTokenHash(hashToken(token));
     }
 
     @Scheduled(fixedRate = 3600000) 
@@ -88,6 +97,25 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         int deletedCount = refreshTokenRepository.deleteByExpiryDateBefore(Instant.now());
         if (deletedCount > 0) {
             logger.info("Cleaned up {} expired refresh tokens", deletedCount);
+        }
+    }
+
+    private String generateRefreshToken() {
+        byte[] randomBytes = new byte[32];
+        SECURE_RANDOM.nextBytes(randomBytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+    }
+
+    private String hashToken(String token) {
+        if (token == null || token.isBlank()) {
+            throw new TokenRefreshException("Refresh token is required");
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 algorithm is not available", e);
         }
     }
 }

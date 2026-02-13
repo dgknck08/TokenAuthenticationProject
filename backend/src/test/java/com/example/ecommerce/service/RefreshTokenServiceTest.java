@@ -48,12 +48,10 @@ class RefreshTokenServiceImplTest {
         when(userService.findById(userId)).thenReturn(Optional.of(user));
         when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(i -> i.getArgument(0));
 
-        RefreshToken token = refreshTokenService.createRefreshToken(userId);
+        String rawToken = refreshTokenService.createRefreshToken(userId);
 
-        assertNotNull(token);
-        assertEquals(user, token.getUser());
-        assertNotNull(token.getToken());
-        assertTrue(token.getExpiryDate().isAfter(Instant.now()));
+        assertNotNull(rawToken);
+        assertFalse(rawToken.isBlank());
         verify(refreshTokenRepository).deleteByUserId(userId);
         verify(refreshTokenRepository).save(any(RefreshToken.class));
     }
@@ -75,11 +73,11 @@ class RefreshTokenServiceImplTest {
         user.setUsername("validUser");
 
         RefreshToken token = new RefreshToken();
-        token.setToken("abc123");
+        token.setTokenHash("hashed-token");
         token.setUser(user);
         token.setExpiryDate(Instant.now().plusSeconds(600));
 
-        when(refreshTokenRepository.findByToken("abc123")).thenReturn(Optional.of(token));
+        when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(token));
 
         String result = refreshTokenService.validateRefreshToken("abc123");
 
@@ -89,7 +87,7 @@ class RefreshTokenServiceImplTest {
     @Test
     void validateRefreshToken_ShouldThrowException_WhenTokenNotFound() {
 
-        when(refreshTokenRepository.findByToken("invalid")).thenReturn(Optional.empty());
+        when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.empty());
 
         assertThrows(TokenRefreshException.class, () -> refreshTokenService.validateRefreshToken("invalid"));
     }
@@ -98,10 +96,10 @@ class RefreshTokenServiceImplTest {
     void validateRefreshToken_ShouldThrowException_WhenTokenIsExpired() {
 
         RefreshToken expiredToken = new RefreshToken();
-        expiredToken.setToken("expired");
+        expiredToken.setTokenHash("hashed-expired-token");
         expiredToken.setExpiryDate(Instant.now().minusSeconds(60));
 
-        when(refreshTokenRepository.findByToken("expired")).thenReturn(Optional.of(expiredToken));
+        when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(expiredToken));
 
         assertThrows(TokenRefreshException.class, () -> refreshTokenService.validateRefreshToken("expired"));
         verify(refreshTokenRepository).delete(expiredToken);

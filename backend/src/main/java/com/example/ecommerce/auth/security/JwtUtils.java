@@ -13,26 +13,33 @@ import java.util.Base64;
 @Component
 public class JwtUtils {
 
+    private static final int MIN_HS512_KEY_BYTES = 64;
     private final SecretKey signingKey;
 
-    public JwtUtils(
-            @Value("${app.jwtSecret}") String jwtSecret,
-            @Value("${spring.profiles.active:default}") String activeProfile
-    ) {
-        byte[] keyBytes;
-
-        if ("test".equals(activeProfile)) {
-            // Test ortamında Base64 decode
-            keyBytes = Base64.getDecoder().decode(jwtSecret);
-        } else if (isValidHexString(jwtSecret) && jwtSecret.length() >= 128) {
-            // Hex string ve en az 512 bit (128 hex karakter)
-            keyBytes = hexStringToByteArray(jwtSecret);
-        } else {
-            // Diğer durumlarda Base64 encode edilmemiş string ise UTF-8 ve padding ile 512 bit yap
-            keyBytes = padTo512Bits(jwtSecret.getBytes(StandardCharsets.UTF_8));
+    public JwtUtils(@Value("${app.jwtSecret}") String jwtSecret) {
+        byte[] keyBytes = decodeSecret(jwtSecret);
+        if (keyBytes.length < MIN_HS512_KEY_BYTES) {
+            throw new IllegalStateException(
+                    "app.jwtSecret is too short. Use at least 64 bytes for HS512 (raw bytes, hex, or base64).");
         }
 
         this.signingKey = Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    private static byte[] decodeSecret(String jwtSecret) {
+        if (jwtSecret == null || jwtSecret.isBlank()) {
+            throw new IllegalStateException("app.jwtSecret is required and must not be blank.");
+        }
+
+        if (isValidHexString(jwtSecret) && jwtSecret.length() % 2 == 0) {
+            return hexStringToByteArray(jwtSecret);
+        }
+
+        try {
+            return Base64.getDecoder().decode(jwtSecret);
+        } catch (IllegalArgumentException ignored) {
+            return jwtSecret.getBytes(StandardCharsets.UTF_8);
+        }
     }
 
     private static boolean isValidHexString(String s) {
@@ -47,19 +54,6 @@ public class JwtUtils {
                     + Character.digit(s.charAt(i + 1), 16));
         }
         return data;
-    }
-
-    /**
-     * Key uzunluğunu 512 bit (64 byte) yapacak şekilde padding ekler.
-     */
-    private static byte[] padTo512Bits(byte[] original) {
-        if (original.length >= 64) return original; // zaten yeterli
-        byte[] padded = new byte[64];
-        System.arraycopy(original, 0, padded, 0, original.length);
-        for (int i = original.length; i < 64; i++) {
-            padded[i] = 0; // kalan byte’ları 0 ile doldur
-        }
-        return padded;
     }
 
     public Claims parseToken(String token) throws JwtException {
