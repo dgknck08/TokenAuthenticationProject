@@ -4,6 +4,9 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [ main, develop ]
+    paths:
+      - "backend/**"
+      - ".github/workflows/**"
   workflow_dispatch:
     inputs:
       run_manual_sonar:
@@ -90,13 +93,14 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        key: ${{ runner.os }}-m2-${{ hashFiles('backend/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
 
     - name: Build and analyze PR
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      working-directory: backend
       run: |
         mvn clean verify sonar:sonar \
           -Dsonar.projectKey=dgknck08_TokenAuthenticationProject \
@@ -133,11 +137,12 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        key: ${{ runner.os }}-m2-${{ hashFiles('backend/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
 
     - name: Build and analyze branch
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      working-directory: backend
       run: mvn clean verify sonar:sonar -Dsonar.projectKey=dgknck08_TokenAuthenticationProject -Dsonar.organization=dgknck08
