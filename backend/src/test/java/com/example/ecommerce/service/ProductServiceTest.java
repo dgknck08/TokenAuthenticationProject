@@ -2,6 +2,7 @@ package com.example.ecommerce.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -15,6 +16,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.example.ecommerce.auth.service.AuditService;
+import com.example.ecommerce.inventory.service.InventoryService;
 import com.example.ecommerce.product.dto.ProductDto;
 import com.example.ecommerce.product.exception.ProductNotFoundException;
 import com.example.ecommerce.product.model.Product;
@@ -26,6 +29,12 @@ class ProductServiceTest {
 
     @Mock
     private ProductRepository productRepository;
+
+    @Mock
+    private InventoryService inventoryService;
+
+    @Mock
+    private AuditService auditService;
 
     @InjectMocks
     private ProductService productService;
@@ -63,13 +72,15 @@ class ProductServiceTest {
     @Test
     void createProduct_ShouldPersistAndReturnDto() {
         ProductDto request = new ProductDto(null, "Mouse", "Wireless", new BigDecimal("49.90"), "img3", "Accessories");
+        request.setStock(20);
         Product saved = new Product(3L, "Mouse", "Wireless", new BigDecimal("49.90"), "img3", "Accessories", 20);
-        when(productRepository.save(org.mockito.ArgumentMatchers.any(Product.class))).thenReturn(saved);
+        when(productRepository.save(any(Product.class))).thenReturn(saved);
 
         ProductDto result = productService.createProduct(request);
 
         assertEquals(3L, result.getId());
         assertEquals("Mouse", result.getName());
+        verify(inventoryService).initializeStock(3L, 20);
     }
 
     @Test
@@ -81,10 +92,12 @@ class ProductServiceTest {
         when(productRepository.save(existing)).thenReturn(requestApplied);
 
         ProductDto request = new ProductDto(null, "New", "New desc", new BigDecimal("20.00"), "new", "NewCat");
+        request.setStock(7);
         ProductDto result = productService.updateProduct(4L, request);
 
         assertEquals("New", result.getName());
         assertEquals("NewCat", result.getCategory());
+        verify(inventoryService).setStock(4L, 7);
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.example.ecommerce.cart.model.GuestCart;
 import com.example.ecommerce.cart.model.GuestCartItem;
 import com.example.ecommerce.cart.dto.CartDto;
 import com.example.ecommerce.cart.dto.CartItemDto;
+import com.example.ecommerce.inventory.service.InventoryService;
 import com.example.ecommerce.product.model.Product;
 import com.example.ecommerce.product.repository.ProductRepository;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -23,6 +24,7 @@ public class GuestCartService {
     
     private final RedisTemplate<String, Object> redisTemplate;
     private final ProductRepository productRepository;
+    private final InventoryService inventoryService;
     private static final String GUEST_CART_KEY_PREFIX = "guest_cart:";
     private static final Duration CART_EXPIRATION = Duration.ofDays(7); // 7 gün
     
@@ -34,6 +36,7 @@ public class GuestCartService {
     public CartDto addItemToGuestCart(String sessionId, Long productId, int quantity) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
+        inventoryService.ensureAvailableStock(productId, quantity);
         
         GuestCart guestCart = getOrCreateGuestCart(sessionId);
         guestCart.addItem(productId, quantity, product.getPrice(), product.getName());
@@ -45,6 +48,9 @@ public class GuestCartService {
     }
     
     public CartDto updateGuestCartItem(String sessionId, Long productId, int quantity) {
+        if (quantity > 0) {
+            inventoryService.ensureAvailableStock(productId, quantity);
+        }
         GuestCart guestCart = getOrCreateGuestCart(sessionId);
         guestCart.updateItemQuantity(productId, quantity);
         

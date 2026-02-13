@@ -79,6 +79,36 @@ public class AuditService {
         }
     }
 
+    public void logSystemEvent(Long userId, String username, AuditLog.AuditAction action, String description, Map<String, Object> details) {
+        logSystemEventAsync(userId, username, action, description, details);
+    }
+
+    @Async("auditExecutor")
+    public CompletableFuture<Void> logSystemEventAsync(Long userId, String username, AuditLog.AuditAction action,
+                                                       String description, Map<String, Object> details) {
+        try {
+            AuditLog.AuditLogBuilder builder = AuditLog.builder()
+                    .userId(userId)
+                    .username(username)
+                    .action(action)
+                    .description(description);
+
+            if (details != null && !details.isEmpty()) {
+                builder.details(objectMapper.writeValueAsString(details));
+            }
+
+            auditLogRepository.save(builder.build());
+            logger.info("System audit event logged: {} by user: {}", action, username);
+            return CompletableFuture.completedFuture(null);
+        } catch (JsonProcessingException e) {
+            logger.error("Error serializing system audit details", e);
+            return CompletableFuture.failedFuture(e);
+        } catch (Exception e) {
+            logger.error("Error logging system audit event", e);
+            return CompletableFuture.failedFuture(e);
+        }
+    }
+
     
     //audit loglarını getirir (userId)
     public Page<AuditLog> getUserAuditLogs(Long userId, Pageable pageable) {

@@ -4,6 +4,7 @@ import com.example.ecommerce.cart.model.CartItem;
 import com.example.ecommerce.cart.repository.CartItemRepository;
 import com.example.ecommerce.cart.exception.CartItemNotFoundException;
 import com.example.ecommerce.cart.exception.CartOperationException;
+import com.example.ecommerce.inventory.service.InventoryService;
 import com.example.ecommerce.product.model.Product;
 import com.example.ecommerce.product.repository.ProductRepository;
 
@@ -28,6 +29,7 @@ public class CartItemServiceImpl implements CartItemService {
     
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
+    private final InventoryService inventoryService;
 
     // ================ Basic CRUD Operations ================
     
@@ -342,11 +344,7 @@ public class CartItemServiceImpl implements CartItemService {
     }
     
     private void validateStock(Product product, int requestedQuantity) {
-        if (product.getStock() < requestedQuantity) {
-            throw new IllegalArgumentException(
-                    String.format("Insufficient stock for product %s. Available: %d, Requested: %d", 
-                            product.getName(), product.getStock(), requestedQuantity));
-        }
+        inventoryService.ensureAvailableStock(product.getId(), requestedQuantity);
     }
     
     // ================ Pagination Support ================

@@ -15,6 +15,12 @@ public class ProductMapper {
         dto.setPrice(product.getPrice());
         dto.setImageUrl(product.getImageUrl());
         dto.setCategory(product.getCategory());
+        dto.setBrand(product.getBrand());
+        dto.setSku(product.getSku());
+        dto.setColor(product.getColor());
+        dto.setSize(product.getSize());
+        dto.setAttributesJson(product.getAttributesJson());
+        dto.setStock(product.getStock());
         return dto;
     }
 
@@ -28,6 +34,12 @@ public class ProductMapper {
         product.setPrice(dto.getPrice());
         product.setImageUrl(dto.getImageUrl());
         product.setCategory(dto.getCategory());
+        product.setBrand(dto.getBrand());
+        product.setSku(dto.getSku());
+        product.setColor(dto.getColor());
+        product.setSize(dto.getSize());
+        product.setAttributesJson(dto.getAttributesJson());
+        product.setStock(dto.getStock());
         return product;
     }
 }

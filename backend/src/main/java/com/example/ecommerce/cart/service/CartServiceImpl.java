@@ -8,6 +8,7 @@ import com.example.ecommerce.cart.model.GuestCartItem;
 import com.example.ecommerce.cart.repository.CartRepository;
 import com.example.ecommerce.cart.dto.CartDto;
 import com.example.ecommerce.cart.dto.CartItemDto;
+import com.example.ecommerce.inventory.service.InventoryService;
 import com.example.ecommerce.product.model.Product;
 import com.example.ecommerce.product.repository.ProductRepository;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ public class CartServiceImpl implements CartService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final GuestCartService guestCartService;
+    private final InventoryService inventoryService;
 
     // Authenticated user methods
     @Override
@@ -51,9 +53,11 @@ public class CartServiceImpl implements CartService {
         if (existingItem.isPresent()) {
             // Update quantity
             CartItem item = existingItem.get();
+            inventoryService.ensureAvailableStock(productId, item.getQuantity() + quantity);
             item.setQuantity(item.getQuantity() + quantity);
         } else {
             // Add new item
+            inventoryService.ensureAvailableStock(productId, quantity);
             CartItem newItem = new CartItem();
             newItem.setProduct(product);
             newItem.setQuantity(quantity);
@@ -75,6 +79,7 @@ public class CartServiceImpl implements CartService {
             // Remove item if quantity is 0 or negative
             cart.getItems().removeIf(item -> item.getProduct().getId().equals(productId));
         } else {
+            inventoryService.ensureAvailableStock(productId, quantity);
             // Update quantity
             cart.getItems().stream()
                     .filter(item -> item.getProduct().getId().equals(productId))
@@ -152,9 +157,11 @@ public class CartServiceImpl implements CartService {
             if (existingItem.isPresent()) {
                 // Add quantities together
                 CartItem item = existingItem.get();
+                inventoryService.ensureAvailableStock(guestItem.getProductId(), item.getQuantity() + guestItem.getQuantity());
                 item.setQuantity(item.getQuantity() + guestItem.getQuantity());
             } else {
                 // Add new item
+                inventoryService.ensureAvailableStock(guestItem.getProductId(), guestItem.getQuantity());
                 CartItem newItem = new CartItem();
                 newItem.setProduct(product);
                 newItem.setQuantity(guestItem.getQuantity());

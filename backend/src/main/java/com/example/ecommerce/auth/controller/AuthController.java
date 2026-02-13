@@ -160,7 +160,7 @@ public class AuthController {
     }
 
     @GetMapping("/account-status/{username}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('AUDIT_READ')")
     public ResponseEntity<Map<String, Object>> getAccountStatus(@PathVariable String username) {
         boolean isLocked = accountLockoutService.isAccountLocked(username);
         int failedAttempts = accountLockoutService.getFailedAttemptCount(username);
@@ -177,7 +177,7 @@ public class AuthController {
     }
 
     @PostMapping("/unlock-account/{username}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ResponseEntity<Map<String, String>> unlockAccount(@PathVariable String username) {
         accountLockoutService.unlockAccount(username);
         return ResponseEntity.ok(Map.of("message", "Account unlocked successfully"));

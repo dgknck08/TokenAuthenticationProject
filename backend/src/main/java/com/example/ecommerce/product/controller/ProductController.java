@@ -25,27 +25,37 @@ public class ProductController {
         return ResponseEntity.ok(products);
     }
 
+    @GetMapping("/category/{category}")
+    public ResponseEntity<List<ProductDto>> getProductsByCategory(@PathVariable String category) {
+        return ResponseEntity.ok(productService.getProductsByCategory(category));
+    }
+
+    @GetMapping("/brand/{brand}")
+    public ResponseEntity<List<ProductDto>> getProductsByBrand(@PathVariable String brand) {
+        return ResponseEntity.ok(productService.getProductsByBrand(brand));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ProductDto> getProductById(@PathVariable Long id) {
         ProductDto product = productService.getProductById(id);
         return ResponseEntity.ok(product);
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @PreAuthorize("hasAuthority('PRODUCT_WRITE')")
     @PostMapping
     public ResponseEntity<ProductDto> createProduct(@RequestBody ProductDto productDto) {
         ProductDto createdProduct = productService.createProduct(productDto);
         return ResponseEntity.status(201).body(createdProduct);
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @PreAuthorize("hasAuthority('PRODUCT_WRITE')")
     @PutMapping("/{id}")
     public ResponseEntity<ProductDto> updateProduct(@PathVariable Long id, @RequestBody ProductDto productDto) {
         ProductDto updatedProduct = productService.updateProduct(id, productDto);
         return ResponseEntity.ok(updatedProduct);
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @PreAuthorize("hasAuthority('PRODUCT_DELETE')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);

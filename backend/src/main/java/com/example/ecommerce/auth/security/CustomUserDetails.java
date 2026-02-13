@@ -1,5 +1,6 @@
 package com.example.ecommerce.auth.security;
 
+import com.example.ecommerce.auth.enums.Permission;
 import com.example.ecommerce.auth.enums.Role;
 import com.example.ecommerce.auth.model.User;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @SuppressWarnings("serial")
 @RequiredArgsConstructor
@@ -21,7 +23,12 @@ public class CustomUserDetails implements UserDetails {
     public Collection<? extends GrantedAuthority> getAuthorities() {
         Set<Role> roles = user.getRoles();
         return roles.stream()
-                .map(role -> new SimpleGrantedAuthority(role.name()))
+                .flatMap(role -> Stream.concat(
+                        Stream.of(new SimpleGrantedAuthority(role.name())),
+                        role.getPermissions().stream()
+                                .map(Permission::name)
+                                .map(SimpleGrantedAuthority::new)
+                ))
                 .collect(Collectors.toSet());
     }
 

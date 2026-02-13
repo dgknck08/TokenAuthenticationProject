@@ -45,7 +45,7 @@ public class CacheManagementControllerTest {
     private JpaMetamodelMappingContext jpaMetamodelMappingContext;
 
     @Test
-    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    @WithMockUser(username = "admin", authorities = {"AUDIT_READ", "AUDIT_WRITE"})
     public void stats_whenAdmin_returnsOk() throws Exception {
         Map<String, Object> stats = Map.of(
             "jwtClaimsCache", Map.of("size", 1),
@@ -62,7 +62,7 @@ public class CacheManagementControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    @WithMockUser(username = "admin", authorities = {"AUDIT_WRITE"})
     public void clearUserCache_whenAdmin_invokesService() throws Exception {
         mockMvc.perform(post("/api/admin/cache/clear/testuser"))
             .andExpect(status().isOk())
@@ -72,7 +72,7 @@ public class CacheManagementControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    @WithMockUser(username = "admin", authorities = {"AUDIT_WRITE"})
     public void clearAllCaches_whenAdmin_invokesService() throws Exception {
         mockMvc.perform(post("/api/admin/cache/clear/all"))
             .andExpect(status().isOk())
@@ -82,7 +82,7 @@ public class CacheManagementControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "user", roles = {"USER"})
+    @WithMockUser(username = "user", authorities = {"PRODUCT_READ"})
     public void endpoints_whenNonAdmin_forbidden() throws Exception {
         mockMvc.perform(get("/api/admin/cache/stats"))
             .andExpect(status().isForbidden());

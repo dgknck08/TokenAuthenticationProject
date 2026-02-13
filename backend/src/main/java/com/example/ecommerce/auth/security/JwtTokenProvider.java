@@ -92,6 +92,7 @@ this.userDetailsCache = userDetailsCache;
         String username = authentication.getName();
         List<String> roles = authentication.getAuthorities().stream()
                             .map(GrantedAuthority::getAuthority)
+                            .filter(authority -> authority.startsWith("ROLE_"))
                             .collect(Collectors.toList());
         return generateTokenWithUsername(username, roles);
     }
