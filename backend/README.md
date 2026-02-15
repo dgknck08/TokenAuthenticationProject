@@ -70,3 +70,15 @@ auth:account_locked:{username}	Account lock information
 auth:ip_attempts:{ip}	IP-based attempt count
 jwt:blacklist:{token}	Blacklisted tokens
 jwt:metadata:{tokenId}	Token metadata
+
+Cloudinary Product Image Upload
+- Endpoint: `POST /api/admin/uploads/product-image`
+- Auth: `PRODUCT_WRITE` authority required
+- Content type: `multipart/form-data`
+- Form field name: `file`
+
+Required environment variables:
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
+- Optional: `CLOUDINARY_FOLDER` (default: `ecommerce/products`)

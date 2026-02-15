@@ -46,6 +46,7 @@ public class ProductService {
 
     public ProductDto createProduct(ProductDto productDto) {
         Product product = ProductMapper.toEntity(productDto);
+        normalizeProductFields(product);
         Product savedProduct = productRepository.save(product);
         inventoryService.initializeStock(savedProduct.getId(), productDto.getStock());
         Map<String, Object> details = Map.of(
@@ -73,6 +74,7 @@ public class ProductService {
         existing.setSize(productDto.getSize());
         existing.setAttributesJson(productDto.getAttributesJson());
         existing.setStock(productDto.getStock());
+        normalizeProductFields(existing);
 
         Product updatedProduct = productRepository.save(existing);
         inventoryService.setStock(updatedProduct.getId(), productDto.getStock());
@@ -108,5 +110,36 @@ public class ProductService {
 
     private Long getCurrentUserId() {
         return null;
+    }
+
+    private void normalizeProductFields(Product product) {
+        product.setName(trimOrNull(product.getName()));
+        product.setDescription(trimOrNull(product.getDescription()));
+        product.setCategory(trimOrNull(product.getCategory()));
+        product.setBrand(trimOrNull(product.getBrand()));
+        product.setSku(trimOrNull(product.getSku()));
+        product.setColor(trimOrNull(product.getColor()));
+        product.setSize(trimOrNull(product.getSize()));
+        product.setAttributesJson(trimOrNull(product.getAttributesJson()));
+        product.setImageUrl(normalizeImageUrl(product.getImageUrl()));
+    }
+
+    private String normalizeImageUrl(String imageUrl) {
+        String normalized = trimOrNull(imageUrl);
+        if (normalized == null) {
+            return null;
+        }
+        if (normalized.startsWith("http://") || normalized.startsWith("https://") || normalized.startsWith("/products/")) {
+            return normalized;
+        }
+        return null;
+    }
+
+    private String trimOrNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }
