@@ -28,13 +28,13 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @Column(length = 100, unique = true)
+    @Column(nullable = false, length = 100, unique = true)
     private String email;
 
-    @Column(length = 50)
+    @Column(nullable = false, length = 50)
     private String firstName;
 
-    @Column(length = 50)
+    @Column(nullable = false, length = 50)
     private String lastName;
 
     @Builder.Default

@@ -79,6 +79,12 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.CONFLICT, "DATA_INTEGRITY_ERROR", "Veritabanı bütünlüğü ihlali.", request);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiErrorResponse> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
+        logger.warn("IllegalArgumentException: {}", ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", ex.getMessage(), request);
+    }
+
     @ExceptionHandler({AccessDeniedException.class, AuthorizationDeniedException.class})
     public ResponseEntity<ApiErrorResponse> handleAccessDenied(Exception ex, HttpServletRequest request) {
         logger.warn("AccessDeniedException: {}", ex.getMessage());

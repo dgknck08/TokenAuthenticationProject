@@ -20,6 +20,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
+import java.util.Locale;
+
 @Service
 public class AuthServiceImpl implements AuthService{
     
@@ -49,11 +51,21 @@ public class AuthServiceImpl implements AuthService{
      * */
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
-        logger.info("Registering new user: {}", request.username());
+        String normalizedUsername = normalizeUsername(request.username());
+        String normalizedEmail = normalizeEmail(request.email());
+        RegisterRequest normalizedRequest = new RegisterRequest(
+            normalizedUsername,
+            normalizedEmail,
+            request.password(),
+            normalizeName(request.firstName()),
+            normalizeName(request.lastName())
+        );
+
+        logger.info("Registering new user: {}", normalizedUsername);
         
-        validateRegisterRequest(request);
+        validateRegisterRequest(normalizedRequest);
         
-        User user = userService.createUser(request);
+        User user = userService.createUser(normalizedRequest);
         String accessToken = jwtTokenProvider.generateTokenWithUsername(
             user.getUsername(),
             user.getRoles().stream().map(r -> r.name()).toList()
@@ -74,15 +86,16 @@ public class AuthServiceImpl implements AuthService{
      * @throws InvalidCredentialsException doğrulama başarısızsa fırlatılır
      */
     public LoginResponse login(LoginRequest request) {
-        logger.info("Login attempt for user: {}", request.username());
+        String normalizedUsername = normalizeUsername(request.username());
+        logger.info("Login attempt for user: {}", normalizedUsername);
         
         try {
             Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.username(), request.password())
+                new UsernamePasswordAuthenticationToken(normalizedUsername, request.password())
             );
             
             String accessToken = jwtTokenProvider.generateToken(authentication);
-            User user = userService.findByUsername(request.username())
+            User user = userService.findByUsername(normalizedUsername)
                                    .orElseThrow(() -> new InvalidCredentialsException("Invalid username or password"));
             
             String refreshToken = refreshTokenService.createRefreshToken(user.getId());
@@ -91,7 +104,7 @@ public class AuthServiceImpl implements AuthService{
             return new LoginResponse(accessToken, refreshToken, user.getUsername(), user.getEmail());
             
         } catch (BadCredentialsException ex) {
-            logger.warn("Failed login attempt for user: {}", request.username());
+            logger.warn("Failed login attempt for user: {}", normalizedUsername);
             throw new InvalidCredentialsException("Invalid username or password");
         }
     }
@@ -131,5 +144,17 @@ public class AuthServiceImpl implements AuthService{
         if (userService.findByEmail(request.email()).isPresent()) {
             throw new UserAlreadyExistsException("Email is already registered");
         }
+    }
+
+    private String normalizeUsername(String username) {
+        return username == null ? null : username.trim();
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizeName(String name) {
+        return name == null ? null : name.trim();
     }
 }

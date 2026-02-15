@@ -100,14 +100,7 @@ this.userDetailsCache = userDetailsCache;
     public Authentication getAuthentication(String token) {
         Claims claims = getClaimsFromToken(token);
         String username = claims.getSubject();
-        
-        @SuppressWarnings("unchecked")
-        List<String> roles = (List<String>) claims.get("roles");
-        
-        List<GrantedAuthority> authorities = roles != null ? 
-            roles.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList()) :
-            new ArrayList<>();
-        
+
         UserDetails userDetails = userDetailsCache.get(username, key -> {
             try {
                 return userDetailsService.loadUserByUsername(key);
@@ -115,8 +108,8 @@ this.userDetailsCache = userDetailsCache;
                 throw new RuntimeException("Failed to load user details for: " + key, e);
             }
         });
-        
-        return new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
+
+        return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
     }
 
     public String getUsernameFromToken(String token) {

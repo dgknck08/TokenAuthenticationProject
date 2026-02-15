@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 
@@ -31,14 +32,19 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User createUser(RegisterRequest request) {
-        logger.info("Creating new user: {}", request.username());
+        String normalizedUsername = normalizeUsername(request.username());
+        String normalizedEmail = normalizeEmail(request.email());
+        String normalizedFirstName = normalizeName(request.firstName());
+        String normalizedLastName = normalizeName(request.lastName());
+
+        logger.info("Creating new user: {}", normalizedUsername);
         
         User user = User.builder()
-                .username(request.username())
+                .username(normalizedUsername)
                 .password(passwordEncoder.encode(request.password()))
-                .email(request.email())
-                .firstName(request.firstName())
-                .lastName(request.lastName())
+                .email(normalizedEmail)
+                .firstName(normalizedFirstName)
+                .lastName(normalizedLastName)
                 .enabled(true)
                 .roles(Set.of(Role.ROLE_USER))
                 .build();
@@ -57,7 +63,7 @@ public class UserServiceImpl implements UserService {
     
     @Override
     public Optional<User> findByUsername(String username) {
-        return userRepository.findByUsername(username);
+        return userRepository.findByUsername(normalizeUsername(username));
     }
 
     @Override
@@ -72,16 +78,28 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Optional<User> findByEmail(String email) {
-        return userRepository.findByEmail(email);
+        return userRepository.findByEmail(normalizeEmail(email));
     }
 
     @Override
     public boolean existsByUsername(String username) {
-        return userRepository.existsByUsername(username);
+        return userRepository.existsByUsername(normalizeUsername(username));
     }
 
     @Override
     public boolean existsByEmail(String email) {
-        return userRepository.existsByEmail(email);
+        return userRepository.existsByEmail(normalizeEmail(email));
+    }
+
+    private String normalizeUsername(String username) {
+        return username == null ? null : username.trim();
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizeName(String name) {
+        return name == null ? null : name.trim();
     }
 }
