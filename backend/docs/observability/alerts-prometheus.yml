@@ -1,0 +1,33 @@
+groups:
+  - name: ecommerce-order-alerts
+    rules:
+      - alert: HighOrderActionFailureRate
+        expr: |
+          sum(rate(ecommerce_order_events_total{outcome="failed"}[5m]))
+          /
+          clamp_min(sum(rate(ecommerce_order_events_total[5m])), 0.0001)
+          > 0.2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Order action failure rate is above 20%"
+          description: "Failure ratio for order actions exceeded threshold for 10 minutes."
+
+      - alert: RefundSpike
+        expr: sum(increase(ecommerce_order_events_total{action="refund",outcome="success"}[30m])) > 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Refund volume spike detected"
+          description: "More than 20 successful refunds in 30 minutes."
+
+      - alert: PaymentFailuresBurst
+        expr: sum(increase(ecommerce_order_payment_failed_total[15m])) > 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Payment simulation failures spiked"
+          description: "More than 10 payment failure events in 15 minutes."
