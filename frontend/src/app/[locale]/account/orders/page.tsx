@@ -21,14 +21,22 @@ export default function OrdersPage() {
     return <Card className="p-6 text-sm">Henüz sipariş yok.</Card>;
   }
 
+  const statusLabel: Record<string, string> = {
+    CREATED: "Oluşturuldu",
+    PAID: "Ödendi",
+    REFUNDED: "Refund",
+    CANCELLED: "İptal"
+  };
+
   return (
     <div className="space-y-3">
       <h1 className="font-display text-3xl font-bold">Siparişlerim</h1>
       {ordersQuery.data.map((order) => (
         <Card key={order.id} className="flex items-center justify-between p-4">
           <div>
-            <p className="font-semibold">{order.id}</p>
+            <p className="font-semibold">#{order.id}</p>
             <p className="text-sm text-foreground/70">{new Date(order.createdAt).toLocaleString()}</p>
+            <p className="text-xs text-foreground/70">Durum: {statusLabel[order.status] || order.status}</p>
           </div>
           <div className="text-right">
             <p className="font-semibold">{formatPrice(order.total)}</p>

@@ -82,16 +82,22 @@ export interface CheckoutFormValues {
 }
 
 export interface OrderItem {
-  id: string;
+  id?: number;
+  productId?: number;
   productName: string;
   quantity: number;
   unitPrice: number;
+  lineTotal?: number;
 }
 
 export interface OrderSummary {
-  id: string;
+  id: number;
   createdAt: string;
   total: number;
-  status: "pending" | "paid" | "shipped" | "delivered" | "cancelled";
+  status: "CREATED" | "PAID" | "REFUNDED" | "CANCELLED";
+  paymentMethod?: "CARD" | "COD";
+  paidAt?: string;
+  cancelledAt?: string;
+  refundedAt?: string;
   items: OrderItem[];
 }

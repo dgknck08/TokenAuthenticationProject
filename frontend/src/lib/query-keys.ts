@@ -4,5 +4,5 @@ export const queryKeys = {
   cart: ["cart"] as const,
   me: ["me"] as const,
   orders: ["orders"] as const,
-  order: (id: string) => ["order", id] as const
+  order: (id: string | number) => ["order", id] as const
 };

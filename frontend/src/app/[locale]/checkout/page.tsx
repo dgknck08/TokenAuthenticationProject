@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { checkoutSchema, CheckoutSchema } from "@/lib/schema/checkout";
-import { useCreateOrder } from "@/lib/hooks/use-account";
+import { useCreateOrder, usePayOrder } from "@/lib/hooks/use-account";
 import { useCart } from "@/lib/hooks/use-cart";
 import { formatPrice } from "@/lib/utils";
 import { useParams } from "next/navigation";
@@ -20,6 +20,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { cartQuery } = useCart();
   const createOrder = useCreateOrder();
+  const payOrder = usePayOrder();
 
   const form = useForm<CheckoutSchema>({
     resolver: zodResolver(checkoutSchema),
@@ -31,21 +32,25 @@ export default function CheckoutPage() {
 
   const payment = form.watch("paymentMethod");
 
-  const onSubmit = form.handleSubmit((values) => {
-    createOrder.mutate(
-      {
-        customer: values,
-        items: cartQuery.data?.items || [],
-        total: cartQuery.data?.totalAmount || 0
-      },
-      {
-        onSuccess: (data) => {
-          toast.success(`Sipariş oluşturuldu: ${data.id}`);
-          router.push(`/${locale}/account/orders/${data.id}`);
-        },
-        onError: () => toast.error("Ödeme tamamlanamadı. Sipariş endpoint'ini yapılandırın veya mock checkout'u etkinleştirin.")
+  const onSubmit = form.handleSubmit(async (values) => {
+    try {
+      const items = (cartQuery.data?.items || []).map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity
+      }));
+      if (!items.length) {
+        toast.error("Sepetiniz boş.");
+        return;
       }
-    );
+
+      const created = await createOrder.mutateAsync({ items });
+      const paymentMethod = values.paymentMethod === "card" ? "CARD" : "COD";
+      const paid = await payOrder.mutateAsync({ id: created.id, paymentMethod });
+      toast.success(`Sipariş ödendi: #${paid.id}`);
+      router.push(`/${locale}/account/orders/${paid.id}`);
+    } catch {
+      toast.error("Ödeme tamamlanamadı. Lütfen tekrar deneyin.");
+    }
   });
 
   return (
@@ -96,7 +101,7 @@ export default function CheckoutPage() {
             <span>Toplam</span>
             <span className="font-semibold">{formatPrice(Number(cartQuery.data?.totalAmount || 0))}</span>
           </div>
-          <Button className="w-full" type="submit" loading={createOrder.isPending}>
+          <Button className="w-full" type="submit" loading={createOrder.isPending || payOrder.isPending}>
             Siparişi tamamla
           </Button>
         </Card>
