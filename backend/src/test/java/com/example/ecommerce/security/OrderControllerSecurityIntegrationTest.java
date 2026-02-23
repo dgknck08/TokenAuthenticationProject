@@ -16,7 +16,8 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -56,8 +57,8 @@ class OrderControllerSecurityIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "user", authorities = {"ORDER_READ"})
     void getOrders_withOrderReadAuthority_returnsOk() throws Exception {
+        stubToken("token-order-read", "user", "ORDER_READ");
         OrderResponse response = OrderResponse.builder()
                 .id(1L)
                 .username("user")
@@ -66,13 +67,14 @@ class OrderControllerSecurityIntegrationTest {
                 .build();
         when(orderService.getMyOrders("user")).thenReturn(List.of(response));
 
-        mockMvc.perform(get("/api/orders"))
+        mockMvc.perform(get("/api/orders")
+                        .header("Authorization", "Bearer token-order-read"))
                 .andExpect(status().isOk());
     }
 
     @Test
-    @WithMockUser(username = "user", authorities = {"ORDER_WRITE"})
     void payOrder_withOrderWriteAuthority_returnsOk() throws Exception {
+        stubToken("token-order-write", "user", "ORDER_WRITE");
         OrderResponse response = OrderResponse.builder()
                 .id(1L)
                 .username("user")
@@ -84,17 +86,31 @@ class OrderControllerSecurityIntegrationTest {
                 .thenReturn(response);
 
         mockMvc.perform(post("/api/orders/1/pay")
+                        .header("Authorization", "Bearer token-order-write")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"paymentMethod\":\"CARD\"}"))
                 .andExpect(status().isOk());
     }
 
     @Test
-    @WithMockUser(username = "user", authorities = {"ORDER_READ"})
     void payOrder_withoutWriteAuthority_returnsForbidden() throws Exception {
+        stubToken("token-order-read-only", "user", "ORDER_READ");
         mockMvc.perform(post("/api/orders/1/pay")
+                        .header("Authorization", "Bearer token-order-read-only")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"paymentMethod\":\"CARD\"}"))
                 .andExpect(status().isForbidden());
+    }
+
+    private void stubToken(String token, String username, String authority) {
+        when(jwtValidationService.validateToken(token)).thenReturn(true);
+        when(jwtTokenProvider.getAuthentication(token)).thenReturn(
+                new UsernamePasswordAuthenticationToken(
+                        username,
+                        null,
+                        List.of(new SimpleGrantedAuthority(authority))
+                )
+        );
+        when(jwtTokenProvider.getTokenId(token)).thenReturn("jti-" + token);
     }
 }

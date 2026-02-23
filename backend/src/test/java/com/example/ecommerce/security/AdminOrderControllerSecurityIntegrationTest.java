@@ -14,7 +14,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -48,15 +49,16 @@ class AdminOrderControllerSecurityIntegrationTest {
     private JpaMetamodelMappingContext jpaMetamodelMappingContext;
 
     @Test
-    @WithMockUser(username = "mod", roles = {"MODERATOR"})
     void adminOrders_withNonAdminRole_returnsForbidden() throws Exception {
-        mockMvc.perform(get("/api/admin/orders"))
+        stubToken("token-mod", "mod", "ROLE_MODERATOR");
+        mockMvc.perform(get("/api/admin/orders")
+                        .header("Authorization", "Bearer token-mod"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = {"ADMIN"})
     void adminOrders_withAdminRole_returnsOk() throws Exception {
+        stubToken("token-admin-list", "admin", "ROLE_ADMIN");
         OrderResponse response = OrderResponse.builder()
                 .id(10L)
                 .username("user")
@@ -65,13 +67,14 @@ class AdminOrderControllerSecurityIntegrationTest {
                 .build();
         when(orderService.getAllOrdersForAdmin()).thenReturn(List.of(response));
 
-        mockMvc.perform(get("/api/admin/orders"))
+        mockMvc.perform(get("/api/admin/orders")
+                        .header("Authorization", "Bearer token-admin-list"))
                 .andExpect(status().isOk());
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = {"ADMIN"})
     void adminRefund_withAdminRole_returnsOk() throws Exception {
+        stubToken("token-admin-refund", "admin", "ROLE_ADMIN");
         OrderResponse response = OrderResponse.builder()
                 .id(11L)
                 .username("user")
@@ -80,7 +83,20 @@ class AdminOrderControllerSecurityIntegrationTest {
                 .build();
         when(orderService.refundOrderForAdmin(11L, "admin")).thenReturn(response);
 
-        mockMvc.perform(post("/api/admin/orders/11/refund"))
+        mockMvc.perform(post("/api/admin/orders/11/refund")
+                        .header("Authorization", "Bearer token-admin-refund"))
                 .andExpect(status().isOk());
+    }
+
+    private void stubToken(String token, String username, String authority) {
+        when(jwtValidationService.validateToken(token)).thenReturn(true);
+        when(jwtTokenProvider.getAuthentication(token)).thenReturn(
+                new UsernamePasswordAuthenticationToken(
+                        username,
+                        null,
+                        List.of(new SimpleGrantedAuthority(authority))
+                )
+        );
+        when(jwtTokenProvider.getTokenId(token)).thenReturn("jti-" + token);
     }
 }

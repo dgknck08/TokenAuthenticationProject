@@ -2,6 +2,7 @@ package com.example.ecommerce.auth.security;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -31,26 +32,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String AUTHORIZATION_HEADER = "Authorization";
-    private static final List<String> ALLOWED_ORIGINS = List.of(
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://frontend"
-    );
+    private final List<String> allowedOrigins;
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtValidationService jwtValidationService;
 
     // Public endpoint listesi
-    private static final List<String> PUBLIC_ENDPOINTS = List.of(
+    private static final Set<String> PUBLIC_ENDPOINTS = Set.of(
         "/api/auth/login",
         "/api/auth/register",
         "/api/auth/refresh-token",
         "/actuator/health"
     );
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, 
-                                   JwtValidationService jwtValidationService) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider,
+                                   JwtValidationService jwtValidationService,
+                                   List<String> allowedOrigins) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.jwtValidationService = jwtValidationService;
+        this.allowedOrigins = allowedOrigins;
     }
 
     @Override
@@ -66,16 +65,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // Public endpoint ise filtreyi geç
         String path = request.getRequestURI();
-        if (PUBLIC_ENDPOINTS.stream().anyMatch(path::startsWith)) {
+        if (isPublicEndpoint(path)) {
             filterChain.doFilter(request, response);
             return;
         }
-        Authentication existingAuth = SecurityContextHolder.getContext().getAuthentication();
-        if (existingAuth != null && existingAuth.isAuthenticated()) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         try {
             String token = getJwtFromRequest(request);
 
@@ -91,8 +84,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             } else {
                 // Sadece public read endpointleri token olmadan geç
                 boolean isOptional =
-                    ("GET".equalsIgnoreCase(request.getMethod()) && path.startsWith("/api/products"))
-                        || ("GET".equalsIgnoreCase(request.getMethod()) && path.startsWith("/api/cart"));
+                    ("GET".equalsIgnoreCase(request.getMethod()) && matchesPathPrefix(path, "/api/products"))
+                        || ("GET".equalsIgnoreCase(request.getMethod()) && matchesPathPrefix(path, "/api/cart"));
                 if (isOptional) {
                     filterChain.doFilter(request, response);
                     return;
@@ -162,11 +155,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private void setCorsHeaders(HttpServletRequest request, HttpServletResponse response) {
         String origin = request.getHeader("Origin");
-        if (origin != null && ALLOWED_ORIGINS.contains(origin)) {
+        if (origin != null && allowedOrigins.contains(origin)) {
             response.setHeader("Access-Control-Allow-Origin", origin);
         }
         response.setHeader("Access-Control-Allow-Credentials", "true");
         response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept");
         response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    }
+
+    private boolean isPublicEndpoint(String path) {
+        return PUBLIC_ENDPOINTS.contains(path);
+    }
+
+    private boolean matchesPathPrefix(String path, String prefix) {
+        return path.equals(prefix) || path.startsWith(prefix + "/");
     }
 }

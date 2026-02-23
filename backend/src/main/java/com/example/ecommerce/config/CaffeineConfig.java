@@ -41,7 +41,7 @@ public class CaffeineConfig {
     public Cache<String, Boolean> jwtValidationCache() {
         return Caffeine.newBuilder()
                 .maximumSize(jwtCacheMaxSize)
-                .expireAfterWrite(5, TimeUnit.MINUTES)
+                .expireAfterWrite(jwtCacheExpireMinutes, TimeUnit.MINUTES)
                 .recordStats()
                 .build();
     }

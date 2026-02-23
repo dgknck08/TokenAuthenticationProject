@@ -33,7 +33,11 @@ class JwtAuthenticationFilterTest {
     void setUp() {
         jwtTokenProvider = Mockito.mock(JwtTokenProvider.class);
         jwtValidationService = Mockito.mock(JwtValidationService.class);
-        filter = new JwtAuthenticationFilter(jwtTokenProvider, jwtValidationService);
+        filter = new JwtAuthenticationFilter(
+                jwtTokenProvider,
+                jwtValidationService,
+                List.of("http://localhost:3000", "http://127.0.0.1:3000", "http://frontend")
+        );
         SecurityContextHolder.clearContext();
     }
 
