@@ -10,6 +10,8 @@ public enum Permission {
     PROFILE_WRITE,
     CART_READ,
     CART_WRITE,
+    ORDER_READ,
+    ORDER_WRITE,
     USER_MANAGE,
     ROLE_MANAGE,
     AUDIT_READ,

@@ -36,7 +36,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         "http://127.0.0.1:3000",
         "http://frontend"
     );
-
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtValidationService jwtValidationService;
 
@@ -58,12 +57,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-
         setCorsHeaders(request, response);
 
-        // Preflight OPTIONS isteğini geç
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-            response.setStatus(HttpServletResponse.SC_OK);
             filterChain.doFilter(request, response);
             return;
         }
@@ -71,6 +67,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // Public endpoint ise filtreyi geç
         String path = request.getRequestURI();
         if (PUBLIC_ENDPOINTS.stream().anyMatch(path::startsWith)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        Authentication existingAuth = SecurityContextHolder.getContext().getAuthentication();
+        if (existingAuth != null && existingAuth.isAuthenticated()) {
             filterChain.doFilter(request, response);
             return;
         }

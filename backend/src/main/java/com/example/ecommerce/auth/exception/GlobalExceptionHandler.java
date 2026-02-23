@@ -1,6 +1,8 @@
 package com.example.ecommerce.auth.exception;
 
 import com.example.ecommerce.common.api.ApiErrorResponse;
+import com.example.ecommerce.order.exception.OrderAccessDeniedException;
+import com.example.ecommerce.order.exception.OrderNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,6 +85,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
         logger.warn("IllegalArgumentException: {}", ex.getMessage());
         return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(OrderNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleOrderNotFound(OrderNotFoundException ex, HttpServletRequest request) {
+        logger.warn("OrderNotFoundException: {}", ex.getMessage());
+        return buildResponse(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(OrderAccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleOrderAccessDenied(OrderAccessDeniedException ex, HttpServletRequest request) {
+        logger.warn("OrderAccessDeniedException: {}", ex.getMessage());
+        return buildResponse(HttpStatus.FORBIDDEN, "ACCESS_DENIED", ex.getMessage(), request);
     }
 
     @ExceptionHandler({AccessDeniedException.class, AuthorizationDeniedException.class})

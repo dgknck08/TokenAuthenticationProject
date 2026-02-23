@@ -1,0 +1,3 @@
+ALTER TABLE orders_table
+    ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS refunded_at TIMESTAMP;

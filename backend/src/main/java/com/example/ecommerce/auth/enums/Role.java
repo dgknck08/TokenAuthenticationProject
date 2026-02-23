@@ -9,7 +9,9 @@ public enum Role {
             Permission.PROFILE_READ,
             Permission.PROFILE_WRITE,
             Permission.CART_READ,
-            Permission.CART_WRITE
+            Permission.CART_WRITE,
+            Permission.ORDER_READ,
+            Permission.ORDER_WRITE
     )),
     ROLE_ADMIN("Administrator", EnumSet.allOf(Permission.class)),
     ROLE_MODERATOR("Moderator", EnumSet.of(
@@ -17,7 +19,8 @@ public enum Role {
             Permission.PRODUCT_WRITE,
             Permission.INVENTORY_READ,
             Permission.INVENTORY_WRITE,
-            Permission.AUDIT_READ
+            Permission.AUDIT_READ,
+            Permission.ORDER_READ
     ));
 
     private final String displayName;

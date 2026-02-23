@@ -4,13 +4,11 @@ import com.example.ecommerce.cart.dto.AddToCartRequest;
 import com.example.ecommerce.cart.dto.CartDto;
 import com.example.ecommerce.cart.dto.UpdateCartItemRequest;
 import com.example.ecommerce.cart.service.CartService;
+import com.example.ecommerce.auth.security.CustomUserDetails;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
-import com.example.ecommerce.auth.service.JwtValidationService;
-import com.example.ecommerce.auth.exception.JwtValidationException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -18,6 +16,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -28,12 +28,11 @@ import org.springframework.web.bind.annotation.*;
 public class CartController {
 
     private final CartService cartService;
-    private final JwtValidationService jwtValidationService	;
 
     @GetMapping
     @Operation(summary = "Get cart", description = "Retrieve cart for authenticated user or guest")
-    public ResponseEntity<CartDto> getCart(HttpServletRequest request) {
-        Long userId = extractUserIdFromRequest(request);
+    public ResponseEntity<CartDto> getCart(HttpServletRequest request, Authentication authentication) {
+        Long userId = extractUserId(authentication);
         CartDto cart;
         
         if (userId != null) {
@@ -52,8 +51,9 @@ public class CartController {
     @Operation(summary = "Add item to cart", description = "Add a product to cart for authenticated user or guest")
     public ResponseEntity<CartDto> addItemToCart(
             @Valid @RequestBody AddToCartRequest request,
-            HttpServletRequest httpRequest) {
-        Long userId = extractUserIdFromRequest(httpRequest);
+            HttpServletRequest httpRequest,
+            Authentication authentication) {
+        Long userId = extractUserId(authentication);
         CartDto cart;
         
         if (userId != null) {
@@ -73,8 +73,9 @@ public class CartController {
     public ResponseEntity<CartDto> updateCartItem(
             @Parameter(description = "Product ID") @PathVariable Long productId,
             @Valid @RequestBody UpdateCartItemRequest request,
-            HttpServletRequest httpRequest) {
-        Long userId = extractUserIdFromRequest(httpRequest);
+            HttpServletRequest httpRequest,
+            Authentication authentication) {
+        Long userId = extractUserId(authentication);
         CartDto cart;
         
         if (userId != null) {
@@ -93,8 +94,9 @@ public class CartController {
     @Operation(summary = "Remove item from cart", description = "Remove a product from cart")
     public ResponseEntity<CartDto> removeItemFromCart(
             @Parameter(description = "Product ID") @PathVariable Long productId,
-            HttpServletRequest httpRequest) {
-        Long userId = extractUserIdFromRequest(httpRequest);
+            HttpServletRequest httpRequest,
+            Authentication authentication) {
+        Long userId = extractUserId(authentication);
         CartDto cart;
         
         if (userId != null) {
@@ -111,8 +113,8 @@ public class CartController {
 
     @DeleteMapping
     @Operation(summary = "Clear cart", description = "Remove all items from cart")
-    public ResponseEntity<Void> clearCart(HttpServletRequest httpRequest) {
-        Long userId = extractUserIdFromRequest(httpRequest);
+    public ResponseEntity<Void> clearCart(HttpServletRequest httpRequest, Authentication authentication) {
+        Long userId = extractUserId(authentication);
         
         if (userId != null) {
             // Authenticated user
@@ -128,8 +130,8 @@ public class CartController {
 
     @PostMapping("/merge")
     @Operation(summary = "Merge guest cart", description = "Merge guest cart to authenticated user cart after login")
-    public ResponseEntity<CartDto> mergeGuestCart(HttpServletRequest httpRequest) {
-        Long userId = extractUserIdFromRequest(httpRequest);
+    public ResponseEntity<CartDto> mergeGuestCart(HttpServletRequest httpRequest, Authentication authentication) {
+        Long userId = extractUserId(authentication);
         if (userId == null) {
             return ResponseEntity.status(401).build();
         }
@@ -144,21 +146,19 @@ public class CartController {
     }
 
     // Helper methods
-    private Long extractUserIdFromRequest(HttpServletRequest request) {
-        try {
-            String authHeader = request.getHeader("Authorization");
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                String token = authHeader.substring(7);
-                if (jwtValidationService.validateToken(token)) {
-                    return jwtValidationService.getUserIdFromToken(token);
-                }
-                throw new JwtValidationException("Invalid JWT token");
-            }
-        } catch (JwtValidationException e) {
-            throw e;
-        } catch (Exception e) {
-            log.debug("Could not extract user ID from request", e);
+    private Long extractUserId(Authentication authentication) {
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            return null;
         }
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof CustomUserDetails customUserDetails) {
+            return customUserDetails.getUser().getId();
+        }
+
+        log.debug("Authentication principal is not CustomUserDetails: {}", principal);
         return null;
     }
 

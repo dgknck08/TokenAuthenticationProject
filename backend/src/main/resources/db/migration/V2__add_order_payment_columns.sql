@@ -1,0 +1,3 @@
+ALTER TABLE orders_table
+    ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20),
+    ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP;

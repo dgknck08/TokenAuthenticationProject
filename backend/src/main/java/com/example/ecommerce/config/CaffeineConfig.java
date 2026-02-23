@@ -5,6 +5,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 
 import io.jsonwebtoken.Claims;
 
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.caffeine.CaffeineCacheManager;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,6 +28,12 @@ public class CaffeineConfig {
 
     @Value("${app.cache.user.expire-after-write-minutes:30}")
     private int userCacheExpireMinutes;
+
+    @Value("${app.cache.product.max-size:500}")
+    private int productCacheMaxSize;
+
+    @Value("${app.cache.product.expire-after-write-minutes:3}")
+    private int productCacheExpireMinutes;
 
     
 
@@ -63,6 +71,16 @@ public class CaffeineConfig {
                 .expireAfterWrite(userCacheExpireMinutes, TimeUnit.MINUTES)
                 .recordStats()
                 .build();
+    }
+
+    @Bean
+    public CacheManager cacheManager() {
+        CaffeineCacheManager manager = new CaffeineCacheManager("productSearch");
+        manager.setCaffeine(Caffeine.newBuilder()
+                .maximumSize(productCacheMaxSize)
+                .expireAfterWrite(productCacheExpireMinutes, TimeUnit.MINUTES)
+                .recordStats());
+        return manager;
     }
 
 

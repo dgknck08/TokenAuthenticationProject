@@ -2,6 +2,7 @@ package com.example.ecommerce.auth.service;
 
 import com.example.ecommerce.auth.model.AuditLog;
 import com.example.ecommerce.auth.repository.AuditLogRepository;
+import com.example.ecommerce.common.trace.CorrelationIdContext;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -59,7 +60,7 @@ public class AuditService {
                 details.put("requestUri", request.getRequestURI());
                 details.put("method", request.getMethod());
                 details.put("sessionId", request.getSession(false) != null ? request.getSession().getId() : null);
-                
+                enrichAuditDetails(details, "AUTH");
                 auditBuilder.details(objectMapper.writeValueAsString(details));
             }
             
@@ -93,8 +94,13 @@ public class AuditService {
                     .action(action)
                     .description(description);
 
-            if (details != null && !details.isEmpty()) {
-                builder.details(objectMapper.writeValueAsString(details));
+            Map<String, Object> normalizedDetails = new HashMap<>();
+            if (details != null) {
+                normalizedDetails.putAll(details);
+            }
+            enrichAuditDetails(normalizedDetails, "SYSTEM");
+            if (!normalizedDetails.isEmpty()) {
+                builder.details(objectMapper.writeValueAsString(normalizedDetails));
             }
 
             auditLogRepository.save(builder.build());
@@ -136,5 +142,13 @@ public class AuditService {
         
         // 3 hiç Header yoksa burasi.
         return request.getRemoteAddr();
+    }
+
+    private void enrichAuditDetails(Map<String, Object> details, String category) {
+        String correlationId = CorrelationIdContext.get();
+        details.putIfAbsent("eventCategory", category);
+        if (correlationId != null && !correlationId.isBlank()) {
+            details.putIfAbsent("correlationId", correlationId);
+        }
     }
 }
