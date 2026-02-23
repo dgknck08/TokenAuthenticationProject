@@ -51,6 +51,31 @@ class ProductControllerTest {
     }
 
     @Test
+    void getProductsByCategory_ShouldReturnOkWithBody() {
+        ProductDto dto = new ProductDto(11L, "Shirt", "Cotton", new BigDecimal("29.90"), "img", "Apparel");
+        when(productService.getProductsByCategory("Apparel")).thenReturn(List.of(dto));
+
+        ResponseEntity<List<ProductDto>> response = productController.getProductsByCategory("Apparel");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(1, response.getBody().size());
+        assertEquals("Shirt", response.getBody().get(0).getName());
+    }
+
+    @Test
+    void getProductsByBrand_ShouldReturnOkWithBody() {
+        ProductDto dto = new ProductDto(12L, "Sneaker", "Sport", new BigDecimal("59.90"), "img", "Shoes");
+        dto.setBrand("Acme");
+        when(productService.getProductsByBrand("Acme")).thenReturn(List.of(dto));
+
+        ResponseEntity<List<ProductDto>> response = productController.getProductsByBrand("Acme");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(1, response.getBody().size());
+        assertEquals("Sneaker", response.getBody().get(0).getName());
+    }
+
+    @Test
     void createProduct_ShouldReturnCreatedStatus() {
         ProductDto request = new ProductDto(null, "Keyboard", "Mechanical", new BigDecimal("100.00"), "img", "Accessories");
         ProductDto created = new ProductDto(3L, "Keyboard", "Mechanical", new BigDecimal("100.00"), "img", "Accessories");

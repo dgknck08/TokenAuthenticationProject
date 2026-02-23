@@ -2,7 +2,9 @@ package com.example.ecommerce.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -10,11 +12,19 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
+import com.example.ecommerce.auth.enums.Role;
+import com.example.ecommerce.auth.model.User;
+import com.example.ecommerce.auth.security.CustomUserDetails;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.example.ecommerce.auth.service.AuditService;
 import com.example.ecommerce.inventory.service.InventoryService;
@@ -38,6 +48,11 @@ class ProductServiceTest {
 
     @InjectMocks
     private ProductService productService;
+
+    @AfterEach
+    void cleanupSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void getAllProducts_ShouldMapRepositoryEntitiesToDtoList() {
@@ -123,5 +138,43 @@ class ProductServiceTest {
         when(productRepository.findById(404L)).thenReturn(Optional.empty());
 
         assertThrows(ProductNotFoundException.class, () -> productService.deleteProduct(404L));
+    }
+
+    @Test
+    void searchProducts_ShouldReturnPagedDtoResult() {
+        Product product = new Product(10L, "Amp", "Tube amp", new BigDecimal("799.00"), "img", "Amplifier", 4);
+        when(productRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(PageRequest.of(0, 10))))
+                .thenReturn(new PageImpl<>(List.of(product)));
+
+        var result = productService.searchProducts("Amplifier", null, "tube", PageRequest.of(0, 10));
+
+        assertEquals(1, result.getTotalElements());
+        assertEquals("Amp", result.getContent().get(0).getName());
+    }
+
+    @Test
+    void createProduct_ShouldUseAuthenticatedUserIdInAudit() {
+        User user = User.builder()
+                .id(77L)
+                .username("admin")
+                .password("pw")
+                .email("admin@test.com")
+                .firstName("A")
+                .lastName("B")
+                .roles(java.util.Set.of(Role.ROLE_ADMIN))
+                .build();
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities()));
+
+        ProductDto request = new ProductDto(null, "Mouse", "Wireless", new BigDecimal("49.90"), "img3", "Accessories");
+        request.setStock(20);
+        Product saved = new Product(3L, "Mouse", "Wireless", new BigDecimal("49.90"), "img3", "Accessories", 20);
+        when(productRepository.save(any(Product.class))).thenReturn(saved);
+
+        productService.createProduct(request);
+
+        verify(auditService).logSystemEvent(eq(77L), eq("admin"), any(), any(), any());
+        verify(auditService, never()).logSystemEvent(eq((Long) null), eq("admin"), any(), any(), any());
     }
 }
