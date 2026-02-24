@@ -85,10 +85,12 @@ public class AccountLockoutService {
                     lockAccount(username, userFailedAttempts.intValue(), request);
                 }
 
-                logger.warn("Failed login attempt for user: {} from IP: {}. Attempt count: {}", username, ipAddress, userFailedAttempts);
+                logger.warn("Failed login attempt for user: {} from IP: {}. Attempt count: {}",
+                        sanitizeForLog(username), sanitizeForLog(ipAddress), userFailedAttempts);
             } else {
                 handleSuccessfulLoginWithPipeline(username, ipAddress, userAgent, request);
-                logger.info("Successful login for user: {} from IP: {}", username, ipAddress);
+                logger.info("Successful login for user: {} from IP: {}",
+                        sanitizeForLog(username), sanitizeForLog(ipAddress));
             }
 
             auditService.logAuthEventAsync(
@@ -164,7 +166,8 @@ public class AccountLockoutService {
 
         redisTemplate.opsForValue().set(lockedKey, lockInfo, Duration.ofMinutes(lockoutDurationMinutes));
 
-        logger.warn("Account locked for user: {} due to {} failed attempts", username, attemptCount);
+        logger.warn("Account locked for user: {} due to {} failed attempts",
+                sanitizeForLog(username), attemptCount);
 
         auditService.logAuthEventAsync(
             null,
@@ -198,7 +201,7 @@ public class AccountLockoutService {
             return null;
         });
 
-        logger.info("Account manually unlocked for user: {}", username);
+        logger.info("Account manually unlocked by administrator");
 
         auditService.logAuthEventAsync(
             null,
@@ -247,7 +250,8 @@ public class AccountLockoutService {
         redisTemplate.opsForValue().set(suspiciousKey, currentLogin, Duration.ofDays(7));
 
         if (suspicious) {
-            logger.warn("Suspicious login detected for user: {} - {}", username, reason.trim());
+            logger.warn("Suspicious login detected for user: {} - {}",
+                    sanitizeForLog(username), sanitizeForLog(reason.trim()));
 
             auditService.logAuthEventAsync(
                 null,
@@ -289,5 +293,12 @@ public class AccountLockoutService {
         }
 
         return request.getRemoteAddr();
+    }
+
+    private String sanitizeForLog(String value) {
+        if (value == null) {
+            return null;
+        }
+        return value.replaceAll("[\\n\\r\\t]", "_");
     }
 }

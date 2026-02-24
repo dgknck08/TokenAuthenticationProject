@@ -78,7 +78,7 @@ public class JwtBlacklistService {
      */
     public void blacklistUserTokens(String username) {
         try {
-            logger.info("Blacklisting all tokens for user: {}", username);
+            logger.info("Blacklisting all tokens for user: {}", sanitizeForLog(username));
             
             // Kullanıcının tokenlerini alir
             Set<String> userTokens = getUserTokens(username);
@@ -109,9 +109,9 @@ public class JwtBlacklistService {
                 // Kullanıcının token listesini temizler
                 clearUserTokens(username);
                 
-                logger.info("Successfully blacklisted {} tokens for user: {}", userTokens.size(), username);
+                logger.info("Successfully blacklisted {} tokens for user: {}", userTokens.size(), sanitizeForLog(username));
             } else {
-                logger.info("No active tokens found for user: {}", username);
+                logger.info("No active tokens found for user: {}", sanitizeForLog(username));
             }
             
         } catch (Exception e) {
@@ -319,5 +319,12 @@ public class JwtBlacklistService {
                        value.toString().getBytes(StandardCharsets.UTF_8));
         });
         return byteMap;
+    }
+
+    private String sanitizeForLog(String value) {
+        if (value == null) {
+            return null;
+        }
+        return value.replaceAll("[\\n\\r\\t]", "_");
     }
 }

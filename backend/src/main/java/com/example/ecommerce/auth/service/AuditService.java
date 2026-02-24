@@ -74,7 +74,7 @@ public class AuditService {
             AuditLog auditLog = auditBuilder.build();
             auditLogRepository.save(auditLog);
             
-            logger.info("Audit event logged: {} for user: {}", action, username);
+            logger.info("Audit event logged: {} for user: {}", action, sanitizeForLog(username));
             return CompletableFuture.completedFuture(null);
             
         } catch (JsonProcessingException e) {
@@ -110,7 +110,7 @@ public class AuditService {
             }
 
             auditLogRepository.save(builder.build());
-            logger.info("System audit event logged: {} by user: {}", action, username);
+            logger.info("System audit event logged: {} by user: {}", action, sanitizeForLog(username));
             return CompletableFuture.completedFuture(null);
         } catch (JsonProcessingException e) {
             logger.error("Error serializing system audit details", e);
@@ -156,5 +156,12 @@ public class AuditService {
         if (correlationId != null && !correlationId.isBlank()) {
             details.putIfAbsent("correlationId", correlationId);
         }
+    }
+
+    private String sanitizeForLog(String value) {
+        if (value == null) {
+            return null;
+        }
+        return value.replaceAll("[\\n\\r\\t]", "_");
     }
 }
