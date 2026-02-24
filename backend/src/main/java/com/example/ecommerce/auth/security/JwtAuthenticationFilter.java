@@ -28,7 +28,7 @@ import io.jsonwebtoken.security.SignatureException;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String AUTHORIZATION_HEADER = "Authorization";
@@ -72,49 +72,38 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String token = getJwtFromRequest(request);
 
-            if (StringUtils.hasText(token)) {
-                if (jwtValidationService.validateToken(token)) {
-                    Authentication auth = jwtTokenProvider.getAuthentication(token);
-                    SecurityContextHolder.getContext().setAuthentication(auth);
-
-                    String tokenId = jwtTokenProvider.getTokenId(token);
-                    request.setAttribute("tokenId", tokenId);
-                    request.setAttribute("authenticatedUser", auth.getName());
-                }
-            } else {
-                // Sadece public read endpointleri token olmadan geç
-                boolean isOptional =
-                    ("GET".equalsIgnoreCase(request.getMethod()) && matchesPathPrefix(path, "/api/products"))
-                        || ("GET".equalsIgnoreCase(request.getMethod()) && matchesPathPrefix(path, "/api/cart"));
-                if (isOptional) {
+            if (!StringUtils.hasText(token)) {
+                if (isOptionalTokenRequest(request, path)) {
                     filterChain.doFilter(request, response);
                     return;
                 }
-            sendErrorResponse(request, response, HttpServletResponse.SC_UNAUTHORIZED, "Missing JWT token");
-            return;
-        }
-    } catch (JwtValidationException e) {
-            logger.warn("JWT validation failed: {}", e.getMessage());
+                sendErrorResponse(request, response, HttpServletResponse.SC_UNAUTHORIZED, "Missing JWT token");
+                return;
+            }
+
+            authenticateRequest(request, token);
+        } catch (JwtValidationException e) {
+            LOG.warn("JWT validation failed: {}", e.getMessage());
             clearSecurityContext();
             sendErrorResponse(request, response, HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
             return;
         } catch (SignatureException | MalformedJwtException e) {
-            logger.error("Invalid JWT token: {}", e.getMessage());
+            LOG.error("Invalid JWT token: {}", e.getMessage());
             clearSecurityContext();
             sendErrorResponse(request, response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid JWT token");
             return;
         } catch (ExpiredJwtException e) {
-            logger.warn("Expired JWT token: {}", e.getMessage());
+            LOG.warn("Expired JWT token: {}", e.getMessage());
             clearSecurityContext();
             sendErrorResponse(request, response, HttpServletResponse.SC_UNAUTHORIZED, "JWT token expired");
             return;
         } catch (JwtException e) {
-            logger.error("JWT processing error: {}", e.getMessage());
+            LOG.error("JWT processing error: {}", e.getMessage());
             clearSecurityContext();
             sendErrorResponse(request, response, HttpServletResponse.SC_UNAUTHORIZED, "JWT processing error");
             return;
         } catch (RuntimeException e) {
-            logger.error("Unexpected error in JWT filter: {}", e.getMessage(), e);
+            LOG.error("Unexpected error in JWT filter: {}", e.getMessage(), e);
             clearSecurityContext();
             sendErrorResponse(request, response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Internal server error");
             return;
@@ -169,5 +158,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private boolean matchesPathPrefix(String path, String prefix) {
         return path.equals(prefix) || path.startsWith(prefix + "/");
+    }
+
+    private boolean isOptionalTokenRequest(HttpServletRequest request, String path) {
+        if (!"GET".equalsIgnoreCase(request.getMethod())) {
+            return false;
+        }
+        return matchesPathPrefix(path, "/api/products") || matchesPathPrefix(path, "/api/cart");
+    }
+
+    private void authenticateRequest(HttpServletRequest request, String token) {
+        if (!jwtValidationService.validateToken(token)) {
+            return;
+        }
+        Authentication auth = jwtTokenProvider.getAuthentication(token);
+        SecurityContextHolder.getContext().setAuthentication(auth);
+        request.setAttribute("tokenId", jwtTokenProvider.getTokenId(token));
+        request.setAttribute("authenticatedUser", auth.getName());
     }
 }

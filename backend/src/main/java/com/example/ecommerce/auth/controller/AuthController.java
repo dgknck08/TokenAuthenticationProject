@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/auth")
 @Validated
 public class AuthController {
+    private static final String KEY_VALID = "valid";
 
 	private final AuthService authService;
     private final JwtTokenProvider jwtTokenProvider;
@@ -56,7 +57,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest, HttpServletRequest request) {
+    public ResponseEntity<Object> login(@Valid @RequestBody LoginRequest loginRequest, HttpServletRequest request) {
         String username = loginRequest.username();
 
         if (accountLockoutService.isAccountLocked(username)) {
@@ -145,7 +146,7 @@ public class AuthController {
                 Map<String, Object> tokenMetadata = jwtBlacklistService.getTokenMetadata(token);
 
                 Map<String, Object> response = Map.of(
-                        "valid", isValid,
+                        KEY_VALID, isValid,
                         "username", username,
                         "roles", jwtTokenProvider.getRolesFromToken(token),
                         "metadata", tokenMetadata != null ? tokenMetadata : Map.of()
@@ -153,10 +154,10 @@ public class AuthController {
 
                 return ResponseEntity.ok(response);
             } catch (Exception e) {
-                return ResponseEntity.ok(Map.of("valid", false, "error", e.getMessage()));
+                return ResponseEntity.ok(Map.of(KEY_VALID, false, "error", e.getMessage()));
             }
         }
-        return ResponseEntity.badRequest().body(Map.of("valid", false, "error", "No token provided"));
+        return ResponseEntity.badRequest().body(Map.of(KEY_VALID, false, "error", "No token provided"));
     }
 
     @GetMapping("/account-status/{username}")

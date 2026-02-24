@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 @Component
 public class JwtTokenProvider {
+    private static final String CACHE_STATS_KEY = "stats";
     
     private final UserDetailsService userDetailsService;
     private final JwtUtils jwtUtils;
@@ -191,15 +192,15 @@ this.userDetailsCache = userDetailsCache;
         Map<String, Object> stats = new HashMap<>();
         stats.put("jwtClaimsCache", Map.of(
             "size", jwtClaimsCache.estimatedSize(),
-            "stats", jwtClaimsCache.stats()
+            CACHE_STATS_KEY, jwtClaimsCache.stats()
         ));
         stats.put("jwtValidationCache", Map.of(
             "size", jwtValidationCache.estimatedSize(),
-            "stats", jwtValidationCache.stats()
+            CACHE_STATS_KEY, jwtValidationCache.stats()
         ));
         stats.put("userDetailsCache", Map.of(
             "size", userDetailsCache.estimatedSize(),
-            "stats", userDetailsCache.stats()
+            CACHE_STATS_KEY, userDetailsCache.stats()
         ));
         return stats;
     }

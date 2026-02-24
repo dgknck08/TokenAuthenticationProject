@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final String VALIDATION_ERROR_CODE = "VALIDATION_ERROR";
 
     private ResponseEntity<ApiErrorResponse> buildResponse(HttpStatus status, String code, String message, HttpServletRequest request) {
         return ResponseEntity.status(status).body(ApiErrorResponse.of(code, message, request.getRequestURI()));
@@ -67,12 +68,12 @@ public class GlobalExceptionHandler {
                 .stream()
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining(", "));
-        return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", message, request);
+        return buildResponse(HttpStatus.BAD_REQUEST, VALIDATION_ERROR_CODE, message, request);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiErrorResponse> handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", ex.getMessage(), request);
+        return buildResponse(HttpStatus.BAD_REQUEST, VALIDATION_ERROR_CODE, ex.getMessage(), request);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -84,7 +85,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiErrorResponse> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
         logger.warn("IllegalArgumentException: {}", ex.getMessage());
-        return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", ex.getMessage(), request);
+        return buildResponse(HttpStatus.BAD_REQUEST, VALIDATION_ERROR_CODE, ex.getMessage(), request);
     }
 
     @ExceptionHandler(OrderNotFoundException.class)
