@@ -1,11 +1,11 @@
 package com.example.ecommerce.auth.service;
 
 import com.example.ecommerce.auth.model.AuditLog;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.connection.RedisKeyCommands;
 import org.springframework.data.redis.connection.RedisStringCommands;
@@ -30,11 +30,15 @@ public class AccountLockoutService {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final AuditService auditService;
+    private final AccountLockoutService selfProxy;
 
     private static final String FAILED_ATTEMPTS_KEY = "auth:failed_attempts:";
     private static final String ACCOUNT_LOCKED_KEY = "auth:account_locked:";
     private static final String IP_ATTEMPTS_KEY = "auth:ip_attempts:";
     private static final String SUSPICIOUS_LOGIN_KEY = "auth:suspicious:";
+    private static final String KEY_IP_ADDRESS = "ipAddress";
+    private static final String KEY_USER_AGENT = "userAgent";
+    private static final String KEY_TIMESTAMP = "timestamp";
 
     @Value("${app.security.account-lockout.max-attempts:5}")
     private int maxFailedAttempts;
@@ -50,13 +54,14 @@ public class AccountLockoutService {
 
     public AccountLockoutService(RedisTemplate<String, Object> redisTemplate,
                                  AuditService auditService,
-                                 ObjectMapper objectMapper) {
+                                 @Lazy AccountLockoutService selfProxy) {
         this.redisTemplate = redisTemplate;
         this.auditService = auditService;
+        this.selfProxy = selfProxy;
     }
 
     public void recordLoginAttempt(String username, boolean successful, String failureReason, HttpServletRequest request) {
-        recordLoginAttemptAsync(username, successful, failureReason, request);
+        selfProxy.recordLoginAttemptAsync(username, successful, failureReason, request);
     }
     /**
      * Kullanıcının giriş denemesini asenkron olarak işler.
@@ -220,8 +225,8 @@ public class AccountLockoutService {
         String reason = "";
 
         if (lastLogin != null) {
-            String lastIp = (String) lastLogin.get("ipAddress");
-            String lastUserAgent = (String) lastLogin.get("userAgent");
+            String lastIp = (String) lastLogin.get(KEY_IP_ADDRESS);
+            String lastUserAgent = (String) lastLogin.get(KEY_USER_AGENT);
 
             if (!ipAddress.equals(lastIp)) {
                 suspicious = true;
@@ -235,9 +240,9 @@ public class AccountLockoutService {
         }
 
         Map<String, Object> currentLogin = new HashMap<>();
-        currentLogin.put("ipAddress", ipAddress);
-        currentLogin.put("userAgent", userAgent);
-        currentLogin.put("timestamp", Instant.now().toString());
+        currentLogin.put(KEY_IP_ADDRESS, ipAddress);
+        currentLogin.put(KEY_USER_AGENT, userAgent);
+        currentLogin.put(KEY_TIMESTAMP, Instant.now().toString());
 
         redisTemplate.opsForValue().set(suspiciousKey, currentLogin, Duration.ofDays(7));
 
@@ -258,12 +263,12 @@ public class AccountLockoutService {
         try {
             Map<String, Object> attemptDetails = new HashMap<>();
             attemptDetails.put("username", username);
-            attemptDetails.put("ipAddress", ipAddress);
-            attemptDetails.put("userAgent", userAgent);
+            attemptDetails.put(KEY_IP_ADDRESS, ipAddress);
+            attemptDetails.put(KEY_USER_AGENT, userAgent);
             attemptDetails.put("successful", successful);
             attemptDetails.put("failureReason", failureReason);
             attemptDetails.put("attemptCount", attemptCount);
-            attemptDetails.put("timestamp", Instant.now().toString());
+            attemptDetails.put(KEY_TIMESTAMP, Instant.now().toString());
 
             String key = "auth:attempt_details:" + username + ":" + System.currentTimeMillis();
             redisTemplate.opsForValue().set(key, attemptDetails, Duration.ofDays(1));

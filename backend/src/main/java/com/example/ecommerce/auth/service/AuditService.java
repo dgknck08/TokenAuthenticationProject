@@ -7,6 +7,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
@@ -25,17 +27,21 @@ public class AuditService {
     
     private final AuditLogRepository auditLogRepository;
     private final ObjectMapper objectMapper;
+    @Autowired
+    @Lazy
+    private AuditService selfProxy;
     
     public AuditService(AuditLogRepository auditLogRepository, ObjectMapper objectMapper) {
         this.auditLogRepository = auditLogRepository;
         this.objectMapper = objectMapper;
+        this.selfProxy = this;
     }
 
     //(login logout vs) loglamak için kullanılan method.
     public void logAuthEvent(Long userId, String username, AuditLog.AuditAction action, 
     		String description, HttpServletRequest request) {
         //async olarak kullanım
-        logAuthEventAsync(userId, username, action, description, request);
+        selfProxy.logAuthEventAsync(userId, username, action, description, request);
     }
 
     @Async("auditExecutor")
@@ -81,7 +87,7 @@ public class AuditService {
     }
 
     public void logSystemEvent(Long userId, String username, AuditLog.AuditAction action, String description, Map<String, Object> details) {
-        logSystemEventAsync(userId, username, action, description, details);
+        selfProxy.logSystemEventAsync(userId, username, action, description, details);
     }
 
     @Async("auditExecutor")

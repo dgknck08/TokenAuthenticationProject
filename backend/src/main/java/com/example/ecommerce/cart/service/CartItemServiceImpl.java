@@ -8,6 +8,8 @@ import com.example.ecommerce.inventory.service.InventoryService;
 import com.example.ecommerce.product.model.Product;
 import com.example.ecommerce.product.repository.ProductRepository;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -30,6 +32,9 @@ public class CartItemServiceImpl implements CartItemService {
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
     private final InventoryService inventoryService;
+    @Autowired
+    @Lazy
+    private CartItemService selfProxy = this;
 
     // ================ Basic CRUD Operations ================
     
@@ -123,7 +128,7 @@ public class CartItemServiceImpl implements CartItemService {
         log.debug("Deleting cart item for cart ID: {} and product ID: {}", cartId, productId);
         
         try {
-            Optional<CartItem> existingItem = findByCartIdAndProductId(cartId, productId);
+            Optional<CartItem> existingItem = selfProxy.findByCartIdAndProductId(cartId, productId);
             if (existingItem.isEmpty()) {
                 log.warn("No cart item found to delete for cart ID: {} and product ID: {}", cartId, productId);
                 throw new CartItemNotFoundException("Cart item not found for deletion");
@@ -176,7 +181,7 @@ public class CartItemServiceImpl implements CartItemService {
         log.debug("Calculating total for cart ID: {}", cartId);
         
         try {
-            List<CartItem> items = getCartItemsByCartId(cartId);
+            List<CartItem> items = selfProxy.getCartItemsByCartId(cartId);
             BigDecimal total = items.stream()
                     .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -195,7 +200,7 @@ public class CartItemServiceImpl implements CartItemService {
         log.debug("Calculating item count for cart ID: {}", cartId);
         
         try {
-            List<CartItem> items = getCartItemsByCartId(cartId);
+            List<CartItem> items = selfProxy.getCartItemsByCartId(cartId);
             int totalItems = items.stream()
                     .mapToInt(CartItem::getQuantity)
                     .sum();
@@ -218,13 +223,13 @@ public class CartItemServiceImpl implements CartItemService {
             throw new IllegalArgumentException("Quantity must be greater than 0");
         }
         
-        CartItem item = getCartItemById(cartItemId);
+        CartItem item = selfProxy.getCartItemById(cartItemId);
         
         // Validate stock if needed
         validateStock(item.getProduct(), newQuantity);
         
         item.setQuantity(newQuantity);
-        CartItem updatedItem = saveCartItem(item);
+        CartItem updatedItem = selfProxy.saveCartItem(item);
         
         log.info("Successfully updated quantity to {} for cart item ID: {}", newQuantity, cartItemId);
         return updatedItem;
@@ -238,9 +243,9 @@ public class CartItemServiceImpl implements CartItemService {
             throw new IllegalArgumentException("Price cannot be null or negative");
         }
         
-        CartItem item = getCartItemById(cartItemId);
+        CartItem item = selfProxy.getCartItemById(cartItemId);
         item.setUnitPrice(newPrice);
-        CartItem updatedItem = saveCartItem(item);
+        CartItem updatedItem = selfProxy.saveCartItem(item);
         
         log.info("Successfully updated unit price to {} for cart item ID: {}", newPrice, cartItemId);
         return updatedItem;
@@ -259,7 +264,7 @@ public class CartItemServiceImpl implements CartItemService {
         log.debug("Refreshing item prices for cart ID: {}", cartId);
         
         try {
-            List<CartItem> items = getCartItemsByCartId(cartId);
+            List<CartItem> items = selfProxy.getCartItemsByCartId(cartId);
             
             for (CartItem item : items) {
                 Product currentProduct = productRepository.findById(item.getProduct().getId())
@@ -272,7 +277,7 @@ public class CartItemServiceImpl implements CartItemService {
                             item.getId(), item.getUnitPrice(), currentProduct.getPrice());
                     
                     item.setUnitPrice(currentProduct.getPrice());
-                    saveCartItem(item);
+                    selfProxy.saveCartItem(item);
                 }
             }
             
@@ -289,7 +294,7 @@ public class CartItemServiceImpl implements CartItemService {
         log.debug("Finding items with insufficient stock for cart ID: {}", cartId);
         
         try {
-            List<CartItem> items = getCartItemsByCartId(cartId);
+            List<CartItem> items = selfProxy.getCartItemsByCartId(cartId);
             
             List<CartItem> insufficientStockItems = items.stream()
                     .filter(item -> {
