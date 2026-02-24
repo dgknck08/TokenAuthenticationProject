@@ -80,7 +80,6 @@ class OrderServiceTest {
 
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
         when(productRepository.findById(5L)).thenReturn(Optional.of(product));
-        when(inventoryService.getAvailableStock(5L)).thenReturn(10);
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order order = invocation.getArgument(0);
             order.setId(99L);
