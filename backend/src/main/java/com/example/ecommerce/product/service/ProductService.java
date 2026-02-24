@@ -7,7 +7,6 @@ import com.example.ecommerce.inventory.service.InventoryService;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -38,11 +37,8 @@ public class ProductService {
         this.auditService = auditService;
     }
 
-    public List<ProductDto> getAllProducts() {
-        List<Product> products = productRepository.findAll();
-        return products.stream()
-                .map(ProductMapper::toDto)
-                .collect(Collectors.toList());
+    public Page<ProductDto> getAllProducts(Pageable pageable) {
+        return productRepository.findAll(pageable).map(ProductMapper::toDto);
     }
 
     public ProductDto getProductById(Long id) {
@@ -134,13 +130,13 @@ public class ProductService {
     public List<ProductDto> getProductsByCategory(String category) {
         return productRepository.findByCategoryIgnoreCase(category).stream()
                 .map(ProductMapper::toDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public List<ProductDto> getProductsByBrand(String brand) {
         return productRepository.findByBrandIgnoreCase(brand).stream()
                 .map(ProductMapper::toDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private String getCurrentUsername() {

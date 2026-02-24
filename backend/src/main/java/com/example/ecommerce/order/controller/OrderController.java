@@ -12,6 +12,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -22,8 +26,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -47,15 +49,17 @@ public class OrderController {
     @GetMapping("/my")
     @PreAuthorize("hasAuthority('ORDER_READ')")
     @Operation(summary = "List My Orders", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<List<OrderResponse>> getMyOrders() {
-        return ResponseEntity.ok(orderService.getMyOrders(getCurrentUsername()));
+    public ResponseEntity<Page<OrderResponse>> getMyOrders(
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(orderService.getMyOrders(getCurrentUsername(), pageable));
     }
 
     @GetMapping
     @PreAuthorize("hasAuthority('ORDER_READ')")
     @Operation(summary = "List My Orders (Alias)", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<List<OrderResponse>> getOrders() {
-        return ResponseEntity.ok(orderService.getMyOrders(getCurrentUsername()));
+    public ResponseEntity<Page<OrderResponse>> getOrders(
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(orderService.getMyOrders(getCurrentUsername(), pageable));
     }
 
     @GetMapping("/{id}")

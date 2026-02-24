@@ -93,8 +93,7 @@ class OrderServiceTest {
         assertEquals(OrderStatus.CREATED, response.getStatus());
         assertEquals(new BigDecimal("2000.00"), response.getTotalAmount());
         assertEquals(1, response.getItems().size());
-        verify(inventoryService).ensureAvailableStock(5L, 2);
-        verify(inventoryService).setStock(5L, 8);
+        verify(inventoryService).decreaseStockWithOptimisticLock(5L, 2);
     }
 
     @Test
@@ -147,13 +146,12 @@ class OrderServiceTest {
         order.setItems(List.of(item));
 
         when(orderRepository.findById(22L)).thenReturn(Optional.of(order));
-        when(inventoryService.getAvailableStock(6L)).thenReturn(3);
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         var response = orderService.cancelOrderForAdmin(22L, "admin");
 
         assertEquals(OrderStatus.CANCELLED, response.getStatus());
-        verify(inventoryService).setStock(6L, 5);
+        verify(inventoryService).increaseStockWithOptimisticLock(6L, 2);
     }
 
     @Test
@@ -171,12 +169,11 @@ class OrderServiceTest {
         order.setItems(List.of(item));
 
         when(orderRepository.findById(30L)).thenReturn(Optional.of(order));
-        when(inventoryService.getAvailableStock(9L)).thenReturn(4);
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         var response = orderService.refundOrderForAdmin(30L, "admin");
 
         assertEquals(OrderStatus.REFUNDED, response.getStatus());
-        verify(inventoryService).setStock(9L, 5);
+        verify(inventoryService).increaseStockWithOptimisticLock(9L, 1);
     }
 }

@@ -55,15 +55,15 @@ class ProductServiceTest {
     }
 
     @Test
-    void getAllProducts_ShouldMapRepositoryEntitiesToDtoList() {
+    void getAllProducts_ShouldMapRepositoryEntitiesToDtoPage() {
         Product product = new Product(1L, "Phone", "Flagship", new BigDecimal("999.99"), "img", "Electronics", 10);
-        when(productRepository.findAll()).thenReturn(List.of(product));
+        when(productRepository.findAll(PageRequest.of(0, 20))).thenReturn(new PageImpl<>(List.of(product)));
 
-        List<ProductDto> result = productService.getAllProducts();
+        var result = productService.getAllProducts(PageRequest.of(0, 20));
 
-        assertEquals(1, result.size());
-        assertEquals("Phone", result.get(0).getName());
-        assertEquals(new BigDecimal("999.99"), result.get(0).getPrice());
+        assertEquals(1, result.getTotalElements());
+        assertEquals("Phone", result.getContent().get(0).getName());
+        assertEquals(new BigDecimal("999.99"), result.getContent().get(0).getPrice());
     }
 
     @Test

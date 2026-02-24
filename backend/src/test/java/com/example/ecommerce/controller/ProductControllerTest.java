@@ -1,6 +1,7 @@
 package com.example.ecommerce.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -12,6 +13,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -31,12 +35,12 @@ class ProductControllerTest {
     @Test
     void getAllProducts_ShouldReturnOkWithBody() {
         ProductDto dto = new ProductDto(1L, "Phone", "Flagship", new BigDecimal("999.99"), "img", "Electronics");
-        when(productService.getAllProducts()).thenReturn(List.of(dto));
+        when(productService.getAllProducts(any())).thenReturn(new PageImpl<>(List.of(dto)));
 
-        ResponseEntity<List<ProductDto>> response = productController.getAllProducts();
+        ResponseEntity<Page<ProductDto>> response = productController.getAllProducts(PageRequest.of(0, 20));
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(1, response.getBody().size());
+        assertEquals(1, response.getBody().getTotalElements());
     }
 
     @Test

@@ -22,6 +22,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -73,9 +75,7 @@ public class OrderService {
             Product product = productRepository.findById(itemRequest.getProductId())
                     .orElseThrow(() -> new IllegalArgumentException("Product not found: " + itemRequest.getProductId()));
 
-            inventoryService.ensureAvailableStock(product.getId(), itemRequest.getQuantity());
-            int newAvailable = Math.max(0, inventoryService.getAvailableStock(product.getId()) - itemRequest.getQuantity());
-            inventoryService.setStock(product.getId(), newAvailable);
+            inventoryService.decreaseStockWithOptimisticLock(product.getId(), itemRequest.getQuantity());
 
             OrderItem item = new OrderItem();
             item.setOrder(order);
@@ -96,17 +96,15 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public List<OrderResponse> getMyOrders(String username) {
-        return orderRepository.findByUsernameOrderByCreatedAtDesc(username).stream()
-                .map(this::toResponse)
-                .toList();
+    public Page<OrderResponse> getMyOrders(String username, Pageable pageable) {
+        return orderRepository.findByUsernameOrderByCreatedAtDesc(username, pageable)
+                .map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
-    public List<OrderResponse> getAllOrdersForAdmin() {
-        return orderRepository.findAllByOrderByCreatedAtDesc().stream()
-                .map(this::toResponse)
-                .toList();
+    public Page<OrderResponse> getAllOrdersForAdmin(Pageable pageable) {
+        return orderRepository.findAllByOrderByCreatedAtDesc(pageable)
+                .map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
@@ -183,8 +181,7 @@ public class OrderService {
     private void restoreStock(Order order) {
         for (OrderItem item : order.getItems()) {
             Long productId = item.getProduct().getId();
-            int current = inventoryService.getAvailableStock(productId);
-            inventoryService.setStock(productId, current + item.getQuantity());
+            inventoryService.increaseStockWithOptimisticLock(productId, item.getQuantity());
         }
     }
 

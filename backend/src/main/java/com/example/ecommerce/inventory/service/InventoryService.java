@@ -13,7 +13,6 @@ import java.time.Instant;
 @Service
 @Transactional
 public class InventoryService {
-
     private final InventoryRepository inventoryRepository;
     private final ProductRepository productRepository;
 
@@ -57,6 +56,48 @@ public class InventoryService {
             item.setReorderLevel(5);
         }
         inventoryRepository.save(item);
+    }
+
+    public void decreaseStockWithOptimisticLock(Long productId, int quantity) {
+        adjustStock(productId, -quantity);
+    }
+
+    public void increaseStockWithOptimisticLock(Long productId, int quantity) {
+        adjustStock(productId, quantity);
+    }
+
+    private void adjustStock(Long productId, int delta) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found with id " + productId));
+
+        InventoryItem item = inventoryRepository.findByProductId(productId)
+                .orElseGet(() -> createInventoryItem(product));
+
+        int current = item.getAvailableStock();
+        int updated = current + delta;
+        if (updated < 0) {
+            throw new InsufficientStockException(
+                    "Insufficient stock for product " + productId + ". Available: " + current + ", Requested: " + Math.abs(delta)
+            );
+        }
+
+        item.setAvailableStock(updated);
+        item.setUpdatedAt(Instant.now());
+        if (item.getReorderLevel() == 0) {
+            item.setReorderLevel(5);
+        }
+        product.setStock(updated);
+        inventoryRepository.saveAndFlush(item);
+    }
+
+    private InventoryItem createInventoryItem(Product product) {
+        InventoryItem item = new InventoryItem();
+        item.setProduct(product);
+        item.setAvailableStock(Math.max(product.getStock(), 0));
+        item.setReservedStock(0);
+        item.setReorderLevel(5);
+        item.setUpdatedAt(Instant.now());
+        return item;
     }
 
     @Transactional(readOnly = true)

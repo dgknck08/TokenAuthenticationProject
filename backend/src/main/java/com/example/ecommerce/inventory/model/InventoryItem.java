@@ -33,4 +33,8 @@ public class InventoryItem {
 
     @Column(nullable = false)
     private Instant updatedAt = Instant.now();
+
+    @Version
+    @Column(nullable = false)
+    private Long version = 0L;
 }

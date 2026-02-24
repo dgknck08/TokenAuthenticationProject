@@ -13,6 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -21,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -65,7 +68,7 @@ class AdminOrderControllerSecurityIntegrationTest {
                 .status(OrderStatus.CREATED)
                 .totalAmount(new BigDecimal("50.00"))
                 .build();
-        when(orderService.getAllOrdersForAdmin()).thenReturn(List.of(response));
+        when(orderService.getAllOrdersForAdmin(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(response)));
 
         mockMvc.perform(get("/api/admin/orders")
                         .header("Authorization", "Bearer token-admin-list"))

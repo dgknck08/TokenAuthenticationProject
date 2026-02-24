@@ -14,6 +14,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -23,6 +25,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -65,7 +68,8 @@ class OrderControllerSecurityIntegrationTest {
                 .status(OrderStatus.CREATED)
                 .totalAmount(new BigDecimal("100.00"))
                 .build();
-        when(orderService.getMyOrders("user")).thenReturn(List.of(response));
+        when(orderService.getMyOrders(org.mockito.ArgumentMatchers.eq("user"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(response)));
 
         mockMvc.perform(get("/api/orders")
                         .header("Authorization", "Bearer token-order-read"))
