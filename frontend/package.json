@@ -5,8 +5,10 @@
   "scripts": {
     "dev": "ng serve --host 0.0.0.0 --port 3000",
     "build": "ng build",
+    "lint": "npm run typecheck",
     "start": "ng serve --host 0.0.0.0 --port 3000",
-    "test": "ng test --watch=false"
+    "test": "ng test --watch=false --browsers=ChromeHeadlessNoSandbox --no-progress",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
     "@angular/common": "^19.2.0",
