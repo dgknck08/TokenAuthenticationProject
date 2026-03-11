@@ -14,6 +14,9 @@ node_modules/
 dist/
 build/
 coverage/
+.angular/
+frontend/.angular/
+frontend/dist/
 backend/target/
 backend/bin/
 
@@ -34,3 +37,7 @@ backend/logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local sharing exclusions
+cdx/
+

@@ -1,0 +1,298 @@
+:host {
+  --accent: #f97316;
+  display: block;
+}
+
+.shipping-banner {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(252, 252, 253, 0.94) 100%);
+  border: 1px solid #e4e4e7;
+  box-shadow:
+    0 0 0 1px #ffffff,
+    0 16px 40px rgba(194, 65, 12, 0.10),
+    inset 0 1px 0 #ffffff;
+  padding-top: 18px;
+  padding-bottom: 32px;
+  font-family: 'Sora', sans-serif;
+}
+
+:host-context(.dark-theme) .shipping-banner {
+  background: linear-gradient(180deg, rgba(24, 24, 27, 0.96) 0%, rgba(17, 17, 19, 0.96) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03),
+    0 18px 42px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.bg-grid {
+  display: none;
+}
+
+.shipping-banner::before {
+  content: '';
+  position: absolute;
+  inset: auto auto 22px -80px;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(249, 115, 22, 0.16) 0%, rgba(249, 115, 22, 0) 72%);
+  pointer-events: none;
+}
+
+.shipping-banner::after {
+  content: '';
+  position: absolute;
+  top: -90px;
+  right: -40px;
+  width: 240px;
+  height: 240px;
+  background: radial-gradient(circle, rgba(249, 115, 22, 0.1) 0%, rgba(249, 115, 22, 0) 72%);
+  pointer-events: none;
+}
+
+.road {
+  position: relative;
+  z-index: 1;
+  height: 14px;
+  background: #e5e7eb;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 40px;
+  overflow: hidden;
+}
+
+:host-context(.dark-theme) .road {
+  background: #202026;
+}
+
+.road::before,
+.road::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #cbd5e1;
+}
+
+.road::before {
+  top: 0;
+}
+
+.road::after {
+  bottom: 0;
+}
+
+:host-context(.dark-theme) .road::before,
+:host-context(.dark-theme) .road::after {
+  background: #30303a;
+}
+
+.road-line {
+  flex: 1;
+  height: 2px;
+  background: #fbbf24;
+  border-radius: 2px;
+  animation: roadMove 1.2s linear infinite;
+}
+
+.road-line:nth-child(2) {
+  animation-delay: -.4s;
+}
+
+.road-line:nth-child(3) {
+  animation-delay: -.8s;
+}
+
+@keyframes roadMove {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateX(-100%);
+    opacity: .4;
+  }
+}
+
+.icon-travel {
+  position: absolute;
+  left: 0;
+  animation: iconTravel 4.2s cubic-bezier(.4, 0, .2, 1) infinite;
+  z-index: 2;
+}
+
+.icon-chip {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #7c3aed, #5b21b6);
+  color: #ffffff;
+  box-shadow:
+    0 12px 24px rgba(124, 58, 237, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  animation: iconBounce .45s ease-in-out infinite alternate;
+}
+
+.drum-chip {
+  background: linear-gradient(145deg, #f97316, #ea580c);
+}
+
+.banner-icon {
+  width: 30px;
+  height: 30px;
+}
+
+@keyframes iconTravel {
+  0% {
+    transform: translateX(-120px);
+  }
+
+  100% {
+    transform: translateX(calc(100% + 920px));
+  }
+}
+
+@keyframes iconBounce {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-3px);
+  }
+}
+
+.cities {
+  position: relative;
+  z-index: 1;
+  height: 36px;
+  margin: 0 40px;
+}
+
+.city-dot {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  opacity: 0;
+  animation: cityAppear .5s ease forwards;
+}
+
+@keyframes cityAppear {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.city-pin {
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.20);
+}
+
+.city-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: #ea580c;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+:host-context(.dark-theme) .char {
+  color: #f3f4f6;
+}
+
+:host-context(.dark-theme) .city-label {
+  color: #fb923c;
+}
+
+.banner-text {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  padding: 18px 32px 0;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.char {
+  display: inline-block;
+  font-size: clamp(13px, 2vw, 16px);
+  font-weight: 600;
+  color: #111827;
+  letter-spacing: .2px;
+  opacity: 0;
+  transform: translateY(10px);
+  animation: charReveal .4s ease forwards;
+}
+
+.char.space {
+  width: .38em;
+}
+
+.char.highlight {
+  color: #ea580c;
+}
+
+@keyframes charReveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .shipping-banner {
+    border-radius: 14px;
+    padding-top: 16px;
+    padding-bottom: 24px;
+  }
+
+  .road {
+    margin-top: 0;
+    padding: 0 18px;
+    gap: 14px;
+  }
+
+  .cities {
+    margin: 0 18px;
+    overflow: hidden;
+  }
+
+  .city-label {
+    font-size: 8px;
+  }
+
+  .banner-text {
+    padding: 18px 20px 0;
+  }
+}

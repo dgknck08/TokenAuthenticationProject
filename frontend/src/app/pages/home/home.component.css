@@ -1,0 +1,19 @@
+.home-page {
+  padding: 24px 0 40px;
+}
+
+.home-shell {
+  width: min(100%, 1180px);
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+@media (max-width: 640px) {
+  .home-page {
+    padding-top: 16px;
+  }
+
+  .home-shell {
+    padding: 0 12px;
+  }
+}

@@ -1,0 +1,35 @@
+<section class="category-showcase" aria-label="Ürün kategorileri">
+
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">Kategoriler</p>
+      <h2>Tarzına ve<br>ihtiyacına göre<br>hızlı seçim yap</h2>
+    </div>
+  </div>
+
+  <div class="category-grid">
+    @for (category of categories; track category.title) {
+      <article
+        class="category-card"
+        [class.primary]="category.accent === 'primary'"
+        [class.warm]="category.accent === 'warm'"
+        [class.soft]="category.accent === 'soft'"
+        (click)="onCategoryClick(category)"
+        role="button"
+        tabindex="0"
+        [attr.aria-label]="category.title + ' kategorisini keşfet'"
+      >
+        <div class="card-glow" aria-hidden="true"></div>
+        <h3>{{ category.title }}</h3>
+        <p class="card-subtitle">{{ category.subtitle }}</p>
+        <p class="card-description">{{ category.description }}</p>
+
+        <div class="card-foot">
+          <span>Keşfetmeye başla</span>
+          <span class="arrow" aria-hidden="true">+</span>
+        </div>
+      </article>
+    }
+  </div>
+
+</section>

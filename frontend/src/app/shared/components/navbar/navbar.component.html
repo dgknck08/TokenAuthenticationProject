@@ -1,0 +1,200 @@
+<header class="navbar-shell">
+  <div class="navbar-inner">
+    <div class="navbar">
+      <div class="navbar-left">
+        <a class="brand" href="/" aria-label="Dmusic ana sayfa">
+          <img
+            class="brand-logo"
+            [src]="logoUrl()"
+            alt="Dmusic"
+          />
+        </a>
+
+        <nav class="nav-links">
+          <button type="button" class="nav-link">Urunlerimiz</button>
+          <button type="button" class="nav-link">Kampanyalar</button>
+          <button type="button" class="nav-link">Hakkimizda</button>
+        </nav>
+      </div>
+
+      <div class="navbar-right">
+        <button
+          type="button"
+          class="icon-btn theme-btn"
+          (click)="toggleTheme()"
+          [attr.aria-label]="isDarkMode() ? 'Aydinlik moda gec' : 'Karanlik moda gec'"
+          [attr.title]="isDarkMode() ? 'Aydinlik' : 'Karanlik'"
+        >
+          <span class="icon-wrap">
+            @if (isDarkMode()) {
+              <svg viewBox="0 0 24 24" width="18" height="18">
+                <path
+                  d="M6.76 4.84 5.34 3.42 3.93 4.84l1.41 1.41Zm10.48 0 1.41 1.41 1.42-1.41-1.42-1.42ZM12 5a1 1 0 0 0 1-1V2h-2v2a1 1 0 0 0 1 1Zm7 8h2v-2h-2Zm-7 6a1 1 0 0 0-1 1v2h2v-2a1 1 0 0 0-1-1Zm-8-6H2v2h2Zm2.34 6.66-1.41 1.41 1.41 1.42 1.42-1.42Zm12.73 1.41 1.42 1.42 1.41-1.42-1.41-1.41ZM12 7a5 5 0 1 0 5 5 5 5 0 0 0-5-5Z"
+                  fill="currentColor"
+                />
+              </svg>
+            } @else {
+              <svg viewBox="0 0 24 24" width="18" height="18">
+                <path d="M20 14.69A8 8 0 0 1 9.31 4 8 8 0 1 0 20 14.69Z" fill="currentColor" />
+              </svg>
+            }
+          </span>
+        </button>
+
+        <div class="cart-menu">
+          <button
+            type="button"
+            class="icon-btn cart-btn"
+            [class.active]="isCartOpen() || isCartActive()"
+            (click)="toggleCart()"
+            aria-label="Sepet"
+            title="Sepet"
+          >
+            <span class="icon-wrap">
+              <svg viewBox="0 0 24 24" width="18" height="18">
+                <path
+                  d="M3 4h2.2c.32 0 .6.22.67.53L6.3 7H20a1 1 0 0 1 .97 1.24l-1.4 5.4A2 2 0 0 1 17.63 15H9a2 2 0 0 1-1.94-1.53L5.1 5H3V4Zm6 13a1.75 1.75 0 1 1 0 3.5A1.75 1.75 0 0 1 9 17Zm8 0a1.75 1.75 0 1 1 0 3.5A1.75 1.75 0 0 1 17 17Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </span>
+            @if (cartCount() > 0) {
+              <span class="badge cart-badge"></span>
+            }
+          </button>
+
+          @if (isCartOpen()) {
+            <div class="cart-dropdown">
+              <div class="cart-dropdown-header">
+                <div>
+                  <span class="cart-title">Sepetim</span>
+                  <span class="cart-subtitle">{{ cartCount() }} urun</span>
+                </div>
+                <button type="button" class="cart-link-btn" (click)="goToCartPage()">Tumunu Gor</button>
+              </div>
+
+              @if (isCartLoading()) {
+                <div class="cart-state">Sepet yukleniyor...</div>
+              } @else if (cartErrorMessage()) {
+                <div class="cart-state error">{{ cartErrorMessage() }}</div>
+              } @else if (!cart()?.items?.length) {
+                <div class="cart-state empty">
+                  <strong>Sepetin bos</strong>
+                  <span>Urun eklediginde burada gorunecek.</span>
+                </div>
+              } @else {
+                <div class="cart-preview-list">
+                  @for (item of cart()?.items ?? []; track item.productId) {
+                    <article class="cart-preview-item">
+                      <div class="cart-preview-thumb">
+                        @if (item.productImage) {
+                          <img [src]="item.productImage" [alt]="item.productName" />
+                        } @else {
+                          <span>{{ item.productName.charAt(0) }}</span>
+                        }
+                      </div>
+
+                      <div class="cart-preview-copy">
+                        <strong>{{ item.productName }}</strong>
+                        <span>{{ item.quantity }} adet</span>
+                      </div>
+
+                      <span class="cart-preview-price">{{ item.totalPrice | currency:'TRY':'symbol':'1.2-2' }}</span>
+                    </article>
+                  }
+                </div>
+
+                <div class="cart-dropdown-footer">
+                  <div class="cart-total">
+                    <span>Toplam</span>
+                    <strong>{{ cart()?.totalAmount | currency:'TRY':'symbol':'1.2-2' }}</strong>
+                  </div>
+                  <button type="button" class="cart-cta" (click)="goToCartPage()">Sepete Git</button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <button
+          type="button"
+          class="icon-btn fav-btn"
+          [class.active]="isFavoriteMode()"
+          (click)="toggleFavorites()"
+          aria-label="Favoriler"
+          title="Favoriler"
+        >
+          <span class="icon-wrap">
+            <svg viewBox="0 0 24 24" width="18" height="18">
+              <path
+                d="m12 21-1.45-1.32C5.4 15.02 2 11.93 2 8.15A4.89 4.89 0 0 1 6.95 3 5.4 5.4 0 0 1 12 5.34 5.4 5.4 0 0 1 17.05 3 4.89 4.89 0 0 1 22 8.15c0 3.78-3.4 6.87-8.55 11.54Z"
+                fill="currentColor"
+              />
+            </svg>
+          </span>
+          @if (isFavoriteMode()) {
+            <span class="badge"></span>
+          }
+        </button>
+
+        <div class="divider"></div>
+
+        @if (!isLoggedIn()) {
+          <div class="auth-actions">
+            <button type="button" class="auth-btn register-btn" (click)="register()">
+              <svg viewBox="0 0 24 24" width="16" height="16">
+                <path
+                  d="M15 12a4 4 0 1 0-3.99-4A4 4 0 0 0 15 12Zm-6 0a3 3 0 1 0-3-3 3 3 0 0 0 3 3Zm6.15 2c-2.66 0-7.15 1.34-7.15 4v1h14v-1c0-2.66-4.49-4-6.85-4ZM9 14c-.34 0-.7.02-1.07.05C6.01 14.23 3 15.18 3 17v2h4v-1c0-1.53.8-2.82 2.18-3.73A7.3 7.3 0 0 0 9 14Z"
+                  fill="currentColor"
+                />
+              </svg>
+              <span>Kayit Ol</span>
+            </button>
+
+            <button type="button" class="auth-btn login-btn" (click)="login()">
+              <svg viewBox="0 0 24 24" width="16" height="16">
+                <path
+                  d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-4.42 0-8 2.01-8 4.5V21h16v-2.5c0-2.49-3.58-4.5-8-4.5Z"
+                  fill="currentColor"
+                />
+              </svg>
+              <span>Giris Yap</span>
+            </button>
+          </div>
+        } @else {
+          <div class="user-menu">
+            <button type="button" class="avatar-btn" (click)="toggleUserMenu()">
+              <span class="avatar-initials">DM</span>
+              <svg class="chevron" [class.open]="isUserMenuOpen()" viewBox="0 0 24 24" width="14" height="14">
+                <path d="M7 10l5 5 5-5Z" fill="currentColor" />
+              </svg>
+            </button>
+
+            @if (isUserMenuOpen()) {
+              <div class="dropdown">
+                <div class="dropdown-header">
+                  <span class="dropdown-name">{{ currentUser()?.username ?? 'Kullanici' }}</span>
+                  <span class="dropdown-email">{{ currentUser()?.email ?? 'user@dmusic.com' }}</span>
+                </div>
+                <hr class="dropdown-divider" />
+                <button class="dropdown-item" type="button">Profilim</button>
+                <button class="dropdown-item" type="button">Siparislerim</button>
+                <button class="dropdown-item" type="button">Ayarlar</button>
+                <hr class="dropdown-divider" />
+                <button class="dropdown-item danger" type="button" (click)="logout()">
+                  <svg viewBox="0 0 24 24" width="15" height="15">
+                    <path
+                      d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4v-2H6V6h4Zm6.59 3.59L15.17 9l2.59 2H9v2h8.76l-2.59 2 1.42 1.41L21.59 12Z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                  Cikis Yap
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</header>

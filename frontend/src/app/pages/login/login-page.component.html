@@ -1,0 +1,81 @@
+<section class="auth-page">
+
+  <div class="auth-panel-left" aria-hidden="true">
+    <div class="panel-noise"></div>
+    <div class="panel-grid"></div>
+
+    <div class="panel-content">
+      <p class="panel-eyebrow">Dmusic</p>
+      <h2 class="panel-headline">Müziğin<br>dünyasına<br>geri dön.</h2>
+      <p class="panel-copy">Sepetini, siparişlerini ve favorilerini tek yerden yönet.</p>
+
+      <ul class="panel-features">
+        <li>
+          <span class="feat-icon">♩</span>
+          <span>Kişisel müzik zevkine göre seçim yap</span>
+        </li>
+        <li>
+          <span class="feat-icon">◈</span>
+          <span>Hızlı sipariş takibi</span>
+        </li>
+        <li>
+          <span class="feat-icon">◉</span>
+          <span>Türkiyenin Her Noktasına Kargo</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="auth-panel-right">
+    <div class="auth-card">
+      <p class="eyebrow">Dmusic Hesabı</p>
+      <h1>Giriş Yap</h1>
+      <p class="subtitle">Hesabına giriş yap, sepetini ve siparişlerini yönet.</p>
+
+      <form class="auth-form" [formGroup]="form" (ngSubmit)="submit()">
+
+        <label class="field">
+          <span class="field-label">Kullanıcı Adı</span>
+          <div class="input-wrap">
+            <svg class="input-icon" viewBox="0 0 24 24" width="16" height="16">
+              <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-4.42 0-8 2.01-8 4.5V21h16v-2.5c0-2.49-3.58-4.5-8-4.5Z" fill="currentColor"/>
+            </svg>
+            <input type="text" formControlName="username" placeholder="kullanici_adi" autocomplete="username" />
+          </div>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Şifre</span>
+          <div class="input-wrap">
+            <svg class="input-icon" viewBox="0 0 24 24" width="16" height="16">
+              <path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2Zm-6 9a2 2 0 1 1 2-2 2 2 0 0 1-2 2Zm3.1-9H8.9V6a3.1 3.1 0 0 1 6.2 0Z" fill="currentColor"/>
+            </svg>
+            <input type="password" formControlName="password" placeholder="••••••••" autocomplete="current-password" />
+          </div>
+        </label>
+
+        @if (errorMessage()) {
+          <p class="error-msg" role="alert">
+            <svg viewBox="0 0 24 24" width="14" height="14">
+              <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm1 15h-2v-2h2Zm0-4h-2V7h2Z" fill="currentColor"/>
+            </svg>
+            {{ errorMessage() }}
+          </p>
+        }
+
+        <button class="submit-btn" type="submit" [disabled]="isSubmitting()">
+          <span>{{ isSubmitting() ? 'Giriş yapılıyor…' : 'Giriş Yap' }}</span>
+          <svg class="btn-arrow" viewBox="0 0 24 24" width="16" height="16">
+            <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8Z" fill="currentColor"/>
+          </svg>
+        </button>
+      </form>
+
+      <p class="switch-copy">
+        Hesabın yok mu?
+        <a routerLink="/register">Kayıt Ol</a>
+      </p>
+    </div>
+  </div>
+
+</section>

@@ -1,0 +1,51 @@
+<section class="cart-page">
+  <div class="cart-shell">
+    <div class="cart-header">
+      <div>
+        <p class="eyebrow">Shopping Cart</p>
+        <h1>Sepetim</h1>
+      </div>
+      <a routerLink="/" class="back-link">Alisverise Don</a>
+    </div>
+
+    @if (isLoading()) {
+      <div class="cart-card">Sepet yukleniyor...</div>
+    } @else if (errorMessage()) {
+      <div class="cart-card error">{{ errorMessage() }}</div>
+    } @else if (!cart()?.items?.length) {
+      <div class="cart-card empty">
+        <h2>Sepetin bos</h2>
+        <p>Backend baglantisi aktif. Ilk urunu eklediginizde burada listelenecek.</p>
+      </div>
+    } @else {
+      <div class="cart-grid">
+        <div class="cart-list">
+          @for (item of cart()?.items ?? []; track item.productId) {
+            <article class="cart-item">
+              <div class="thumb">
+                @if (item.productImage) {
+                  <img [src]="item.productImage" [alt]="item.productName" />
+                } @else {
+                  <span>{{ item.productName.charAt(0) }}</span>
+                }
+              </div>
+
+              <div class="item-copy">
+                <h2>{{ item.productName }}</h2>
+                <p>{{ item.quantity }} adet</p>
+              </div>
+
+              <strong>{{ item.totalPrice | currency:'TRY':'symbol':'1.2-2' }}</strong>
+            </article>
+          }
+        </div>
+
+        <aside class="summary-card">
+          <p>{{ totalItems() }} urun</p>
+          <h2>{{ cart()?.totalAmount | currency:'TRY':'symbol':'1.2-2' }}</h2>
+          <span>{{ cart()?.cartType === 'guest' ? 'Misafir sepeti' : 'Hesap sepeti' }}</span>
+        </aside>
+      </div>
+    }
+  </div>
+</section>

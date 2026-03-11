@@ -1,0 +1,287 @@
+/* ═══════════════════════════════════════════════
+   CATEGORY SHOWCASE — component styles
+   Tokens inherited from global stylesheet
+   (--accent, --bg-shell, --text-* etc.)
+═══════════════════════════════════════════════ */
+
+/* ── Section layout ───────────────────────────── */
+.category-showcase {
+  padding: 80px 24px 100px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* ── Section head ─────────────────────────────── */
+.section-head {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: end;
+  gap: 32px;
+  margin-bottom: 56px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+
+.eyebrow::before {
+  content: '';
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+.section-head h2 {
+  font-size: clamp(32px, 4.5vw, 54px);
+  font-weight: 800;
+  line-height: .95;
+  letter-spacing: -1.5px;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.section-copy {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  max-width: 380px;
+  justify-self: end;
+  align-self: end;
+}
+
+/* ── Grid ─────────────────────────────────────── */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+/* ── Card base ────────────────────────────────── */
+.category-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid #e4e4e7;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(252, 252, 253, 0.94) 100%);
+  padding: 32px 28px 28px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  box-shadow:
+    0 0 0 1px #ffffff,
+    0 16px 40px rgba(194, 65, 12, 0.10),
+    inset 0 1px 0 #ffffff;
+  transition:
+    transform 300ms cubic-bezier(.4, 0, .2, 1),
+    box-shadow 300ms cubic-bezier(.4, 0, .2, 1),
+    border-color 300ms cubic-bezier(.4, 0, .2, 1);
+  backdrop-filter: none;
+  animation: cardIn .5s cubic-bezier(.4, 0, .2, 1) both;
+}
+
+.category-card:nth-child(1) { animation-delay: .05s; }
+.category-card:nth-child(2) { animation-delay: .12s; }
+.category-card:nth-child(3) { animation-delay: .19s; }
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.category-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: color-mix(in srgb, var(--card-accent) 45%, transparent);
+}
+
+/* ── Accent color variants ────────────────────── */
+.category-card.primary { --card-accent: #f97316; }
+.category-card.warm    { --card-accent: #f97316; }
+.category-card.soft    { --card-accent: #f97316; }
+
+/* Top accent slide-in line */
+.category-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--card-accent, var(--accent));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 250ms cubic-bezier(.4, 0, .2, 1);
+  border-radius: 0 0 2px 2px;
+}
+
+.category-card:hover::before {
+  transform: scaleX(1);
+}
+
+/* ── Glow blob ────────────────────────────────── */
+.card-glow {
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--card-accent, #f97316) 12%, transparent) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 300ms cubic-bezier(.4, 0, .2, 1);
+}
+
+.category-card:hover .card-glow {
+  opacity: 1;
+}
+
+/* ── Title ────────────────────────────────────── */
+.category-card h3 {
+  font-size: clamp(26px, 3vw, 36px);
+  font-weight: 800;
+  line-height: .95;
+  letter-spacing: -1px;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  min-height: 68px;
+  display: flex;
+  align-items: flex-start;
+  white-space: pre-line;
+}
+
+/* ── Subtitle ─────────────────────────────────── */
+.card-subtitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--card-accent, var(--accent));
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+/* ── Description ──────────────────────────────── */
+.card-description {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  flex: 1;
+}
+
+/* ── Footer CTA ───────────────────────────────── */
+.card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  transition: color 300ms cubic-bezier(.4, 0, .2, 1);
+}
+
+.category-card:hover .card-foot {
+  color: var(--card-accent, var(--accent));
+}
+
+.arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  font-size: 18px;
+  line-height: 1;
+  transition:
+    transform 300ms cubic-bezier(.4, 0, .2, 1),
+    background 200ms cubic-bezier(.4, 0, .2, 1),
+    color 300ms cubic-bezier(.4, 0, .2, 1);
+}
+
+.category-card:hover .arrow {
+  transform: rotate(45deg);
+  background: var(--card-accent, var(--accent));
+  border-color: var(--card-accent, var(--accent));
+  color: #fff;
+}
+
+:host-context(.dark-theme) .section-head h2 {
+  color: #f5f5f5;
+}
+
+:host-context(.dark-theme) .section-copy {
+  color: #b4b4bb;
+}
+
+:host-context(.dark-theme) .category-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(24, 24, 27, 0.96) 0%, rgba(17, 17, 19, 0.96) 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03),
+    0 18px 42px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+:host-context(.dark-theme) .category-card h3 {
+  color: #f5f5f5;
+}
+
+:host-context(.dark-theme) .card-description {
+  color: #b4b4bb;
+}
+
+:host-context(.dark-theme) .card-foot {
+  border-top-color: rgba(255, 255, 255, 0.08);
+  color: #8f8f97;
+}
+
+/* ── Responsive ───────────────────────────────── */
+@media (max-width: 1024px) {
+  .section-head {
+    grid-template-columns: 1fr;
+  }
+
+  .section-copy {
+    justify-self: start;
+    max-width: 100%;
+  }
+
+  .category-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .category-showcase {
+    padding: 48px 16px 64px;
+  }
+
+  .section-head {
+    margin-bottom: 36px;
+  }
+
+  .category-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .category-card h3 {
+    min-height: auto;
+  }
+}

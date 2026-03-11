@@ -1,14 +1,13 @@
-# Auralyn Guitars Frontend
+# Dmusic Frontend
 
-Production-ready Next.js frontend for the ecommerce backend.
+Angular standalone storefront for the ecommerce backend. Legacy React/Next uygulamasi kaldirildi.
 
 ## Stack
-- Next.js App Router + TypeScript
-- TailwindCSS (headless component approach)
-- TanStack Query + Axios interceptors
-- RHF + Zod forms
-- Framer Motion animations
-- Light/Dark theme + EN/TR locale structure
+- Angular 19 standalone components + router
+- HttpClient interceptor based auth refresh flow
+- Reactive Forms for auth, checkout, account, and admin actions
+- EN/TR locale shell with light/dark theme toggle
+- Nginx static serving for production containers
 
 ## Run
 ```bash
@@ -17,25 +16,15 @@ npm install
 npm run dev
 ```
 
-## Environment
-Copy `.env.example` to `.env.local`.
+App default URL: `http://localhost:3000`
 
-## Test
+## Build
 ```bash
-npm run test
-npm run test:e2e
+npm run build
 ```
 
-## Backend Contract Checklist (fill/confirm)
-1. Base URL (`NEXT_PUBLIC_API_BASE_URL`) -> default `http://localhost:8080/api`
-2. Auth model -> Access token in `localStorage`, refresh token in `httpOnly cookie` (detected from backend)
-3. Products listing contract -> backend currently returns plain array from `GET /products`; no server pagination/filter endpoint yet
-4. Categories endpoint -> backend currently has no `GET /categories`
-5. Orders endpoints -> backend currently has no `/orders` endpoints
-6. Payment flow endpoint -> backend currently has no `/payments/intent` endpoint
-7. Forgot password endpoint -> backend currently has no reset endpoint
-8. Error format -> `ApiErrorResponse { code, message, timestamp, path }` (confirmed)
-
 ## Notes
-- Shop filters/pagination are handled client-side until backend filtering endpoints are added.
-- Checkout and account orders support mock mode via env flags.
+- Angular source lives under `frontend/src`.
+- Legacy React/Next application files were removed.
+- API base URL resolves to `${window.location.origin}/api` in browser runtime, with fallback `http://localhost:8080/api`.
+- Frontend Docker image now builds Angular output and serves it via Nginx.

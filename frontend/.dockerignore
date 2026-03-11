@@ -1,0 +1,9 @@
+.git
+.github
+node_modules
+cdx
+playwright-report
+test-results
+coverage
+dist
+.angular

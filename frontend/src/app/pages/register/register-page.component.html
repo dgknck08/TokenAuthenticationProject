@@ -1,0 +1,108 @@
+<section class="auth-page">
+
+  <!-- Sol panel — brand dekor -->
+  <div class="auth-panel-left" aria-hidden="true">
+    <div class="panel-noise"></div>
+    <div class="panel-grid"></div>
+
+    <div class="panel-content">
+      <p class="panel-eyebrow">Dmusic</p>
+      <h2 class="panel-headline">Müzisyen<br>topluluğuna<br>katıl.</h2>
+      <p class="panel-copy">Binlerce enstrüman, ekipman ve aksesuarı keşfetmeye başla.</p>
+
+      <ul class="panel-features">
+        <li>
+          <span class="feat-icon">♩</span>
+          <span>Ücretsiz üyelik, anında erişim</span>
+        </li>
+        <li>
+          <span class="feat-icon">◈</span>
+          <span>Kişiselleştirilmiş öneriler</span>
+        </li>
+        <li>
+          <span class="feat-icon">◉</span>
+          <span>Üye olanlara özel indirim kampanyaları</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Sağ panel — form -->
+  <div class="auth-panel-right">
+    <div class="auth-card wide">
+      <p class="eyebrow">Create Account</p>
+      <h1>Kayıt Ol</h1>
+      <p class="subtitle">Birkaç saniyede üye ol, dünyayı keşfet.</p>
+
+      <form class="auth-form two-col" [formGroup]="form" (ngSubmit)="submit()">
+
+        <label class="field">
+          <span class="field-label">Ad</span>
+          <div class="input-wrap">
+            <input type="text" formControlName="firstName" placeholder="Adın" autocomplete="given-name" />
+          </div>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Soyad</span>
+          <div class="input-wrap">
+            <input type="text" formControlName="lastName" placeholder="Soyadın" autocomplete="family-name" />
+          </div>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Kullanıcı Adı</span>
+          <div class="input-wrap">
+            <svg class="input-icon" viewBox="0 0 24 24" width="16" height="16">
+              <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-4.42 0-8 2.01-8 4.5V21h16v-2.5c0-2.49-3.58-4.5-8-4.5Z" fill="currentColor"/>
+            </svg>
+            <input type="text" formControlName="username" placeholder="dmusicuser" autocomplete="username" />
+          </div>
+        </label>
+
+        <label class="field">
+          <span class="field-label">E-posta</span>
+          <div class="input-wrap">
+            <svg class="input-icon" viewBox="0 0 24 24" width="16" height="16">
+              <path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 4-8 5-8-5V6l8 5 8-5Z" fill="currentColor"/>
+            </svg>
+            <input type="email" formControlName="email" placeholder="mail@ornek.com" autocomplete="email" />
+          </div>
+        </label>
+
+        <label class="field full">
+          <span class="field-label">Şifre</span>
+          <div class="input-wrap">
+            <svg class="input-icon" viewBox="0 0 24 24" width="16" height="16">
+              <path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2Zm-6 9a2 2 0 1 1 2-2 2 2 0 0 1-2 2Zm3.1-9H8.9V6a3.1 3.1 0 0 1 6.2 0Z" fill="currentColor"/>
+            </svg>
+            <input type="password" formControlName="password" placeholder="En az 8 karakter" autocomplete="new-password" />
+          </div>
+        </label>
+
+        @if (errorMessage()) {
+          <p class="error-msg full" role="alert">
+            <svg viewBox="0 0 24 24" width="14" height="14">
+              <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm1 15h-2v-2h2Zm0-4h-2V7h2Z" fill="currentColor"/>
+            </svg>
+            {{ errorMessage() }}
+          </p>
+        }
+
+        <button class="submit-btn full" type="submit" [disabled]="isSubmitting()">
+          <span>{{ isSubmitting() ? 'Kayıt yapılıyor…' : 'Kayıt Ol' }}</span>
+          <svg class="btn-arrow" viewBox="0 0 24 24" width="16" height="16">
+            <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8Z" fill="currentColor"/>
+          </svg>
+        </button>
+
+      </form>
+
+      <p class="switch-copy">
+        Zaten hesabın var mı?
+        <a routerLink="/login">Giriş Yap</a>
+      </p>
+    </div>
+  </div>
+
+</section>

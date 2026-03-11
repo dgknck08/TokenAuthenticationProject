@@ -1,0 +1,29 @@
+<section class="shipping-banner">
+  <div class="bg-grid" aria-hidden="true"></div>
+
+  <div class="road" aria-hidden="true">
+    <div class="road-line"></div>
+    <div class="road-line"></div>
+    <div class="road-line"></div>
+  </div>
+
+  <div class="cities" aria-hidden="true">
+    @for (city of cities; track city.name) {
+      <div class="city-dot" [style.left.%]="city.pos" [style.animation-delay.ms]="city.delay">
+        <span class="city-pin"></span>
+        <span class="city-label">{{ city.name }}</span>
+      </div>
+    }
+  </div>
+
+  <div class="banner-text" aria-label="7 ilimizdeki magazalarimizdan tum sehirlerimize kargo imkani sagliyoruz">
+    @for (char of chars(); track $index) {
+      <span
+        class="char"
+        [class.space]="char.value === ' '"
+        [class.highlight]="char.highlight"
+        [style.animation-delay.ms]="1200 + ($index * 40)"
+      >{{ char.value === ' ' ? '\u00A0' : char.value }}</span>
+    }
+  </div>
+</section>
