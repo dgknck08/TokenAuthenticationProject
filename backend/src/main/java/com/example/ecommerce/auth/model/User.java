@@ -31,6 +31,10 @@ public class User {
     @Column(nullable = false, length = 100, unique = true)
     private String email;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean emailVerified = false;
+
     @Column(nullable = false, length = 50)
     private String firstName;
 

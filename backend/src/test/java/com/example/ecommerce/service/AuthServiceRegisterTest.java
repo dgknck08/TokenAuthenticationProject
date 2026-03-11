@@ -4,8 +4,7 @@ package com.example.ecommerce.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -24,6 +23,8 @@ import com.example.ecommerce.auth.enums.Role;
 import com.example.ecommerce.auth.exception.UserAlreadyExistsException;
 import com.example.ecommerce.auth.model.User;
 import com.example.ecommerce.auth.security.JwtTokenProvider;
+import com.example.ecommerce.auth.service.EmailVerificationService;
+import com.example.ecommerce.auth.service.PasswordResetService;
 import com.example.ecommerce.auth.service.RefreshTokenService;
 import com.example.ecommerce.auth.service.UserService;
 import com.example.ecommerce.auth.service.impl.AuthServiceImpl;
@@ -33,6 +34,8 @@ public class AuthServiceRegisterTest {
     private UserService userService;
     private JwtTokenProvider jwtTokenProvider;
     private RefreshTokenService refreshTokenService;
+    private EmailVerificationService emailVerificationService;
+    private PasswordResetService passwordResetService;
     private AuthenticationManager authenticationManager;
     private AuthServiceImpl authService;
 
@@ -41,9 +44,18 @@ public class AuthServiceRegisterTest {
         userService = mock(UserService.class);
         jwtTokenProvider = mock(JwtTokenProvider.class);
         refreshTokenService = mock(RefreshTokenService.class);
+        emailVerificationService = mock(EmailVerificationService.class);
+        passwordResetService = mock(PasswordResetService.class);
         authenticationManager = mock(AuthenticationManager.class);
 
-        authService = new AuthServiceImpl(userService, jwtTokenProvider, refreshTokenService, authenticationManager);
+        authService = new AuthServiceImpl(
+                userService,
+                jwtTokenProvider,
+                refreshTokenService,
+                emailVerificationService,
+                passwordResetService,
+                authenticationManager
+        );
     }
 
     @Test
@@ -63,14 +75,9 @@ public class AuthServiceRegisterTest {
         mockUser.setEmail(email);
         mockUser.setRoles(Set.of(Role.ROLE_USER));
 
-        String fakeAccessToken = "access-token";
-        String fakeRefreshToken = "refresh-token";
-
         when(userService.findByUsername(username)).thenReturn(Optional.empty());
         when(userService.findByEmail(email)).thenReturn(Optional.empty());
         when(userService.createUser(registerRequest)).thenReturn(mockUser);
-        when(jwtTokenProvider.generateTokenWithUsername(eq(username), anyList())).thenReturn(fakeAccessToken);
-        when(refreshTokenService.createRefreshToken(mockUser.getId())).thenReturn(fakeRefreshToken);
 
 
         RegisterResponse response = authService.register(registerRequest);
@@ -78,8 +85,9 @@ public class AuthServiceRegisterTest {
 
         assertEquals(username, response.username());
         assertEquals(email, response.email());
-        assertEquals(fakeAccessToken, response.accessToken());
-        assertEquals(fakeRefreshToken, response.refreshToken());
+        assertEquals(null, response.accessToken());
+        assertEquals(null, response.refreshToken());
+        verify(emailVerificationService).createAndSendVerification(mockUser);
     }
 
     @Test
@@ -133,7 +141,7 @@ public class AuthServiceRegisterTest {
     }
 
     @Test
-    void register_ShouldThrowException_whenTokenGenerationFails() {
+    void register_ShouldThrowException_whenVerificationCreationFails() {
 
         RegisterRequest request = new RegisterRequest("newuser", "new@example.com", "password", "Test", "User");
         
@@ -146,29 +154,8 @@ public class AuthServiceRegisterTest {
         when(userService.findByUsername("newuser")).thenReturn(Optional.empty());
         when(userService.findByEmail("new@example.com")).thenReturn(Optional.empty());
         when(userService.createUser(request)).thenReturn(mockUser);
-        when(jwtTokenProvider.generateTokenWithUsername(eq("newuser"), anyList())).thenThrow(new RuntimeException("Token generation failed"));
-
-        // Act & Assert
-        assertThrows(RuntimeException.class, () -> authService.register(request));
-    }
-
-    @Test
-    void register_ShouldThrowException_whenRefreshTokenCreationFails() {
-
-    	RegisterRequest request = new RegisterRequest("newuser", "new@example.com", "password", "Test", "User");
-        
-        User mockUser = new User();
-        mockUser.setId(1L);
-        mockUser.setUsername("newuser");
-        mockUser.setEmail("new@example.com");
-        mockUser.setRoles(Set.of(Role.ROLE_USER));
-
-        when(userService.findByUsername("newuser")).thenReturn(Optional.empty());
-        when(userService.findByEmail("new@example.com")).thenReturn(Optional.empty());
-        when(userService.createUser(request)).thenReturn(mockUser);
-        when(jwtTokenProvider.generateTokenWithUsername(eq("newuser"), anyList())).thenReturn("access-token");
-        when(refreshTokenService.createRefreshToken(1L)).thenThrow(new RuntimeException("Refresh token creation failed"));
-
+        doThrow(new RuntimeException("Verification creation failed"))
+            .when(emailVerificationService).createAndSendVerification(mockUser);
 
         assertThrows(RuntimeException.class, () -> authService.register(request));
     }
@@ -187,17 +174,12 @@ public class AuthServiceRegisterTest {
         when(userService.findByUsername("newuser")).thenReturn(Optional.empty());
         when(userService.findByEmail("new@example.com")).thenReturn(Optional.empty());
         when(userService.createUser(request)).thenReturn(mockUser);
-        when(jwtTokenProvider.generateTokenWithUsername(eq("newuser"), anyList())).thenReturn("access-token");
-        when(refreshTokenService.createRefreshToken(1L)).thenReturn("refresh-token");
-
-
         authService.register(request);
 
 
         verify(userService).findByUsername("newuser");
         verify(userService).findByEmail("new@example.com");
         verify(userService).createUser(request);
-        verify(jwtTokenProvider).generateTokenWithUsername(eq("newuser"), anyList());
-        verify(refreshTokenService).createRefreshToken(1L);
+        verify(emailVerificationService).createAndSendVerification(mockUser);
     }
 }

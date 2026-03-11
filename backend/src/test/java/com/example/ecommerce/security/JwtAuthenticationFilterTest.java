@@ -36,7 +36,8 @@ class JwtAuthenticationFilterTest {
         filter = new JwtAuthenticationFilter(
                 jwtTokenProvider,
                 jwtValidationService,
-                List.of("http://localhost:3000", "http://127.0.0.1:3000", "http://frontend")
+                List.of("http://localhost:3000", "http://127.0.0.1:3000", "http://frontend"),
+                List.of("https://*.iyzipay.com", "https://*.iyzico.com")
         );
         SecurityContextHolder.clearContext();
     }
@@ -49,6 +50,17 @@ class JwtAuthenticationFilterTest {
     @Test
     void shouldBypassPublicEndpointWithoutToken() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/auth/login");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, new MockFilterChain());
+
+        assertEquals(200, response.getStatus());
+        verify(jwtValidationService, never()).validateToken(Mockito.anyString());
+    }
+
+    @Test
+    void shouldBypassIyzicoCallbackWithoutToken() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/payments/iyzico/callback");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, new MockFilterChain());
@@ -79,13 +91,13 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    void shouldReturnUnauthorized_whenMissingTokenOnProtectedEndpoint() throws Exception {
+    void shouldAllowGuestCartEndpoints_whenMissingToken() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/cart/items");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, new MockFilterChain());
 
-        assertEquals(401, response.getStatus());
+        assertEquals(200, response.getStatus());
     }
 
     @Test

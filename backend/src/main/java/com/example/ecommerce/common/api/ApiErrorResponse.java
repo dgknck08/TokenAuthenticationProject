@@ -10,7 +10,7 @@ public record ApiErrorResponse(
         String message,
         @Schema(example = "2026-02-23T19:41:03Z")
         String timestamp,
-        @Schema(example = "/api/orders/1/pay")
+        @Schema(example = "/api/payments/iyzico/orders/1/init")
         String path
 ) {
     public static ApiErrorResponse of(String code, String message, String path) {

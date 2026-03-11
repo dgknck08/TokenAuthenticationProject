@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +18,7 @@ import org.springframework.data.redis.core.ValueOperations;
 
 import com.example.ecommerce.cart.dto.CartDto;
 import com.example.ecommerce.cart.model.GuestCart;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.ecommerce.cart.service.GuestCartService;
 import com.example.ecommerce.inventory.service.InventoryService;
 import com.example.ecommerce.product.model.Product;
@@ -39,7 +41,7 @@ class GuestCartServiceTest {
     @BeforeEach
     void setUp() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        guestCartService = new GuestCartService(redisTemplate, productRepository, inventoryService);
+        guestCartService = new GuestCartService(redisTemplate, productRepository, inventoryService, new ObjectMapper());
     }
 
     @Test
@@ -64,5 +66,33 @@ class GuestCartServiceTest {
         assertEquals(3, dto.getTotalItems());
         assertEquals(new BigDecimal("90.00"), dto.getTotalAmount());
         verify(inventoryService).ensureAvailableStock(5L, 3);
+    }
+
+    @Test
+    void getGuestCart_whenLegacyPayloadExists_recoversCart() {
+        LinkedHashMap<String, Object> legacy = new LinkedHashMap<>();
+        legacy.put("sessionId", "sess-legacy");
+        legacy.put("createdAt", 1L);
+        legacy.put("updatedAt", 1L);
+
+        LinkedHashMap<String, Object> item = new LinkedHashMap<>();
+        item.put("productId", 9);
+        item.put("productName", "Legacy Product");
+        item.put("quantity", 2);
+        item.put("unitPrice", new BigDecimal("15.00"));
+
+        LinkedHashMap<String, Object> items = new LinkedHashMap<>();
+        items.put("9", item);
+        legacy.put("items", items);
+
+        when(valueOperations.get("guest_cart:sess-legacy")).thenReturn(legacy);
+
+        CartDto dto = guestCartService.getGuestCart("sess-legacy");
+
+        assertEquals(2, dto.getTotalItems());
+        assertEquals(new BigDecimal("30.00"), dto.getTotalAmount());
+        verify(valueOperations).set(org.mockito.ArgumentMatchers.eq("guest_cart:sess-legacy"),
+                org.mockito.ArgumentMatchers.any(GuestCart.class),
+                org.mockito.ArgumentMatchers.any());
     }
 }

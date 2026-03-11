@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.util.PatternMatchUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -33,6 +34,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private final List<String> allowedOrigins;
+    private final List<String> allowedOriginPatterns;
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtValidationService jwtValidationService;
 
@@ -41,15 +43,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         "/api/auth/login",
         "/api/auth/register",
         "/api/auth/refresh-token",
+        "/api/auth/verify-email",
+        "/api/auth/resend-verification",
+        "/api/auth/forgot-password",
+        "/api/auth/reset-password",
+        "/api/payments/iyzico/callback",
+        "/api/payments/iyzico/webhook",
         "/actuator/health"
     );
 
     public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider,
                                    JwtValidationService jwtValidationService,
-                                   List<String> allowedOrigins) {
+                                   List<String> allowedOrigins,
+                                   List<String> allowedOriginPatterns) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.jwtValidationService = jwtValidationService;
         this.allowedOrigins = allowedOrigins;
+        this.allowedOriginPatterns = allowedOriginPatterns;
     }
 
     @Override
@@ -144,12 +154,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private void setCorsHeaders(HttpServletRequest request, HttpServletResponse response) {
         String origin = request.getHeader("Origin");
-        if (origin != null && allowedOrigins.contains(origin)) {
+        if (origin != null && isAllowedOrigin(origin)) {
             response.setHeader("Access-Control-Allow-Origin", origin);
         }
         response.setHeader("Access-Control-Allow-Credentials", "true");
-        response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept");
-        response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        response.setHeader("Access-Control-Allow-Headers", "*");
+        response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+    }
+
+    private boolean isAllowedOrigin(String origin) {
+        if (allowedOrigins.contains(origin)) {
+            return true;
+        }
+        for (String pattern : allowedOriginPatterns) {
+            if (PatternMatchUtils.simpleMatch(pattern, origin)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isPublicEndpoint(String path) {
@@ -161,10 +183,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private boolean isOptionalTokenRequest(HttpServletRequest request, String path) {
-        if (!"GET".equalsIgnoreCase(request.getMethod())) {
-            return false;
+        if (matchesPathPrefix(path, "/api/cart")) {
+            return true;
         }
-        return matchesPathPrefix(path, "/api/products") || matchesPathPrefix(path, "/api/cart");
+        return "GET".equalsIgnoreCase(request.getMethod()) && matchesPathPrefix(path, "/api/products");
     }
 
     private void authenticateRequest(HttpServletRequest request, String token) {

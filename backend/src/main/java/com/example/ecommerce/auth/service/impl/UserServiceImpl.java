@@ -43,6 +43,7 @@ public class UserServiceImpl implements UserService {
                 .username(normalizedUsername)
                 .password(passwordEncoder.encode(request.password()))
                 .email(normalizedEmail)
+                .emailVerified(false)
                 .firstName(normalizedFirstName)
                 .lastName(normalizedLastName)
                 .enabled(true)

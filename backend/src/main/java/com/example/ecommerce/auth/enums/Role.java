@@ -10,6 +10,8 @@ public enum Role {
             Permission.PROFILE_WRITE,
             Permission.CART_READ,
             Permission.CART_WRITE,
+            Permission.WISHLIST_READ,
+            Permission.WISHLIST_WRITE,
             Permission.ORDER_READ,
             Permission.ORDER_WRITE
     )),

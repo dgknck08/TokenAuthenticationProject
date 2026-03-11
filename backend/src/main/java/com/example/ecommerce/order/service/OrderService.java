@@ -5,16 +5,20 @@ import com.example.ecommerce.auth.model.AuditLog;
 import com.example.ecommerce.auth.repository.UserRepository;
 import com.example.ecommerce.auth.service.AuditService;
 import com.example.ecommerce.inventory.service.InventoryService;
+import com.example.ecommerce.order.dto.CheckoutQuoteRequest;
+import com.example.ecommerce.order.dto.CheckoutQuoteResponse;
 import com.example.ecommerce.order.dto.CreateOrderRequest;
 import com.example.ecommerce.order.dto.OrderItemRequest;
 import com.example.ecommerce.order.dto.OrderItemResponse;
 import com.example.ecommerce.order.dto.OrderResponse;
-import com.example.ecommerce.order.dto.PayOrderRequest;
+import com.example.ecommerce.order.dto.ShipOrderRequest;
+import com.example.ecommerce.order.dto.ShippingAddressRequest;
 import com.example.ecommerce.order.exception.OrderAccessDeniedException;
 import com.example.ecommerce.order.exception.OrderNotFoundException;
 import com.example.ecommerce.order.model.Order;
 import com.example.ecommerce.order.model.OrderItem;
 import com.example.ecommerce.order.model.OrderStatus;
+import com.example.ecommerce.order.model.PaymentProviderStatus;
 import com.example.ecommerce.order.repository.OrderRepository;
 import com.example.ecommerce.product.model.Product;
 import com.example.ecommerce.product.repository.ProductRepository;
@@ -43,6 +47,7 @@ public class OrderService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final InventoryService inventoryService;
+    private final CheckoutPricingService checkoutPricingService;
     private final AuditService auditService;
     private final MeterRegistry meterRegistry;
 
@@ -50,12 +55,14 @@ public class OrderService {
                         UserRepository userRepository,
                         ProductRepository productRepository,
                         InventoryService inventoryService,
+                        CheckoutPricingService checkoutPricingService,
                         AuditService auditService,
                         MeterRegistry meterRegistry) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.inventoryService = inventoryService;
+        this.checkoutPricingService = checkoutPricingService;
         this.auditService = auditService;
         this.meterRegistry = meterRegistry;
     }
@@ -69,25 +76,33 @@ public class OrderService {
         order.setUserId(user.getId());
         order.setUsername(user.getUsername());
         order.setStatus(OrderStatus.CREATED);
+        OrderPricingResult pricing = checkoutPricingService.buildPricing(
+                request.getItems(),
+                user.getId(),
+                request.getCouponCode(),
+                request.getShippingMethod()
+        );
+        order.setSubtotalAmount(pricing.subtotalAmount());
+        order.setDiscountAmount(pricing.discountAmount());
+        order.setShippingFee(pricing.shippingFee());
+        order.setTaxAmount(pricing.taxAmount());
+        order.setTotalAmount(pricing.totalAmount());
+        order.setCouponCode(pricing.appliedCouponCode());
+        order.setShippingMethod(pricing.shippingMethod());
+        applyShippingAddress(order, request.getShippingAddress());
 
-        BigDecimal total = BigDecimal.ZERO;
-        for (OrderItemRequest itemRequest : request.getItems()) {
-            Product product = productRepository.findById(itemRequest.getProductId())
-                    .orElseThrow(() -> new IllegalArgumentException("Product not found: " + itemRequest.getProductId()));
-
-            inventoryService.decreaseStockWithOptimisticLock(product.getId(), itemRequest.getQuantity());
-
+        for (OrderPricingItem pricingItem : pricing.items()) {
+            Product product = pricingItem.product();
+            int quantity = pricingItem.quantity();
+            inventoryService.decreaseStockWithOptimisticLock(product.getId(), quantity);
             OrderItem item = new OrderItem();
             item.setOrder(order);
             item.setProduct(product);
-            item.setQuantity(itemRequest.getQuantity());
+            item.setQuantity(quantity);
             item.setUnitPrice(product.getPrice());
             item.setProductNameSnapshot(product.getName());
             order.getItems().add(item);
-
-            total = total.add(product.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity())));
         }
-        order.setTotalAmount(total);
         Order saved = orderRepository.save(order);
         recordOrderMetric("create", "success", startNanos);
         logOrderAudit(user.getId(), username, AuditLog.AuditAction.ORDER_CREATED, saved);
@@ -96,62 +111,105 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
+    public CheckoutQuoteResponse quoteCheckout(String username, CheckoutQuoteRequest request) {
+        long startNanos = System.nanoTime();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
+        OrderPricingResult pricing = checkoutPricingService.buildPricing(
+                request.getItems(),
+                user.getId(),
+                request.getCouponCode(),
+                request.getShippingMethod()
+        );
+        recordOrderMetric("quote", "success", startNanos);
+        auditService.logSystemEvent(
+                user.getId(),
+                username,
+                AuditLog.AuditAction.CHECKOUT_QUOTED,
+                "Checkout quote calculated",
+                Map.of(
+                        "subtotalAmount", pricing.subtotalAmount(),
+                        "discountAmount", pricing.discountAmount(),
+                        "shippingFee", pricing.shippingFee(),
+                        "taxAmount", pricing.taxAmount(),
+                        "totalAmount", pricing.totalAmount(),
+                        "couponCode", pricing.appliedCouponCode()
+                )
+        );
+        return CheckoutQuoteResponse.builder()
+                .subtotalAmount(pricing.subtotalAmount())
+                .discountAmount(pricing.discountAmount())
+                .shippingFee(pricing.shippingFee())
+                .taxAmount(pricing.taxAmount())
+                .totalAmount(pricing.totalAmount())
+                .appliedCouponCode(pricing.appliedCouponCode())
+                .shippingMethod(pricing.shippingMethod())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
     public Page<OrderResponse> getMyOrders(String username, Pageable pageable) {
-        return orderRepository.findByUsernameOrderByCreatedAtDesc(username, pageable)
-                .map(this::toResponse);
+        Page<Order> orders = orderRepository.findByUsernameOrderByCreatedAtDesc(username, pageable);
+        preloadOrderItemsAndProducts(orders.getContent());
+        return orders.map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
     public Page<OrderResponse> getAllOrdersForAdmin(Pageable pageable) {
-        return orderRepository.findAllByOrderByCreatedAtDesc(pageable)
-                .map(this::toResponse);
+        Page<Order> orders = orderRepository.findAllByOrderByCreatedAtDesc(pageable);
+        preloadOrderItemsAndProducts(orders.getContent());
+        return orders.map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
     public OrderResponse getMyOrderById(String username, Long orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new OrderNotFoundException("Order not found: " + orderId));
+        Order order = loadOrderWithItems(orderId);
         if (!order.getUsername().equals(username)) {
             throw new OrderAccessDeniedException("Order does not belong to current user.");
         }
         return toResponse(order);
     }
 
-    public OrderResponse payMyOrder(String username, Long orderId, PayOrderRequest request) {
+    public OrderResponse cancelMyOrder(String username, Long orderId) {
+        return cancelMyOrder(username, orderId, null);
+    }
+
+    public OrderResponse cancelMyOrder(String username, Long orderId, String cancelReason) {
         long startNanos = System.nanoTime();
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new OrderNotFoundException("Order not found: " + orderId));
+        Order order = loadOrderWithItems(orderId);
         if (!order.getUsername().equals(username)) {
-            recordOrderMetric("pay", "failed", startNanos);
+            recordOrderMetric("cancel_customer", "failed", startNanos);
             throw new OrderAccessDeniedException("Order does not belong to current user.");
         }
         if (order.getStatus() != OrderStatus.CREATED) {
-            recordOrderMetric("pay", "failed", startNanos);
-            meterRegistry.counter("ecommerce.order.payment.failed", "reason", "invalid_state").increment();
-            auditService.logSystemEvent(order.getUserId(), username, AuditLog.AuditAction.ORDER_PAYMENT_FAILED,
-                    "Order payment failed", Map.of("orderId", orderId, "status", String.valueOf(order.getStatus())));
-            throw new IllegalArgumentException("Only created orders can be paid.");
+            recordOrderMetric("cancel_customer", "failed", startNanos);
+            throw new IllegalArgumentException("Only created orders can be cancelled by customer.");
         }
-        order.setPaymentMethod(request.getPaymentMethod());
-        order.setStatus(OrderStatus.PAID);
-        order.setPaidAt(Instant.now());
+        restoreStock(order);
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setCancelReason(trimOrNull(cancelReason));
+        order.setCancelledAt(Instant.now());
         Order saved = orderRepository.save(order);
-        recordOrderMetric("pay", "success", startNanos);
-        logOrderAudit(order.getUserId(), username, AuditLog.AuditAction.ORDER_PAID, saved);
-        logger.info("event=order_paid orderId={} username={} paymentMethod={}", saved.getId(), username, saved.getPaymentMethod());
+        recordOrderMetric("cancel_customer", "success", startNanos);
+        logOrderAudit(order.getUserId(), username, AuditLog.AuditAction.ORDER_CANCELLED, saved);
+        logger.info("event=order_cancelled_by_customer orderId={} username={}", saved.getId(), username);
         return toResponse(saved);
     }
 
     public OrderResponse cancelOrderForAdmin(Long orderId, String adminUsername) {
+        return cancelOrderForAdmin(orderId, adminUsername, null);
+    }
+
+    public OrderResponse cancelOrderForAdmin(Long orderId, String adminUsername, String cancelReason) {
         long startNanos = System.nanoTime();
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new OrderNotFoundException("Order not found: " + orderId));
+        Order order = loadOrderWithItems(orderId);
         if (order.getStatus() != OrderStatus.CREATED) {
             recordOrderMetric("cancel", "failed", startNanos);
             throw new IllegalArgumentException("Only created orders can be cancelled.");
         }
         restoreStock(order);
         order.setStatus(OrderStatus.CANCELLED);
+        order.setCancelReason(trimOrNull(cancelReason));
         order.setCancelledAt(Instant.now());
         Order saved = orderRepository.save(order);
         recordOrderMetric("cancel", "success", startNanos);
@@ -162,8 +220,7 @@ public class OrderService {
 
     public OrderResponse refundOrderForAdmin(Long orderId, String adminUsername) {
         long startNanos = System.nanoTime();
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new OrderNotFoundException("Order not found: " + orderId));
+        Order order = loadOrderWithItems(orderId);
         if (order.getStatus() != OrderStatus.PAID) {
             recordOrderMetric("refund", "failed", startNanos);
             throw new IllegalArgumentException("Only paid orders can be refunded.");
@@ -176,6 +233,69 @@ public class OrderService {
         logOrderAudit(order.getUserId(), adminUsername, AuditLog.AuditAction.ORDER_REFUNDED, saved);
         logger.info("event=order_refunded orderId={} admin={}", saved.getId(), adminUsername);
         return toResponse(saved);
+    }
+
+    public OrderResponse packOrderForAdmin(Long orderId, String adminUsername) {
+        long startNanos = System.nanoTime();
+        Order order = loadOrderWithItems(orderId);
+        if (order.getStatus() != OrderStatus.PAID) {
+            recordOrderMetric("pack", "failed", startNanos);
+            throw new IllegalArgumentException("Only paid orders can be packed.");
+        }
+        order.setStatus(OrderStatus.PACKED);
+        order.setPackedAt(Instant.now());
+        Order saved = orderRepository.save(order);
+        recordOrderMetric("pack", "success", startNanos);
+        logOrderAudit(order.getUserId(), adminUsername, AuditLog.AuditAction.ORDER_PACKED, saved);
+        logger.info("event=order_packed orderId={} admin={}", saved.getId(), adminUsername);
+        return toResponse(saved);
+    }
+
+    public OrderResponse shipOrderForAdmin(Long orderId, ShipOrderRequest request, String adminUsername) {
+        long startNanos = System.nanoTime();
+        Order order = loadOrderWithItems(orderId);
+        if (order.getStatus() != OrderStatus.PACKED) {
+            recordOrderMetric("ship", "failed", startNanos);
+            throw new IllegalArgumentException("Only packed orders can be shipped.");
+        }
+        order.setStatus(OrderStatus.SHIPPED);
+        order.setTrackingNumber(trimOrNull(request.getTrackingNumber()));
+        order.setShippedAt(Instant.now());
+        Order saved = orderRepository.save(order);
+        recordOrderMetric("ship", "success", startNanos);
+        logOrderAudit(order.getUserId(), adminUsername, AuditLog.AuditAction.ORDER_SHIPPED, saved);
+        logger.info("event=order_shipped orderId={} admin={} trackingNumber={}", saved.getId(), adminUsername, saved.getTrackingNumber());
+        return toResponse(saved);
+    }
+
+    public OrderResponse deliverOrderForAdmin(Long orderId, String adminUsername) {
+        long startNanos = System.nanoTime();
+        Order order = loadOrderWithItems(orderId);
+        if (order.getStatus() != OrderStatus.SHIPPED) {
+            recordOrderMetric("deliver", "failed", startNanos);
+            throw new IllegalArgumentException("Only shipped orders can be delivered.");
+        }
+        order.setStatus(OrderStatus.DELIVERED);
+        order.setDeliveredAt(Instant.now());
+        Order saved = orderRepository.save(order);
+        recordOrderMetric("deliver", "success", startNanos);
+        logOrderAudit(order.getUserId(), adminUsername, AuditLog.AuditAction.ORDER_DELIVERED, saved);
+        logger.info("event=order_delivered orderId={} admin={}", saved.getId(), adminUsername);
+        return toResponse(saved);
+    }
+
+    private Order loadOrderWithItems(Long orderId) {
+        return orderRepository.findByIdWithItemsAndProduct(orderId)
+                .or(() -> orderRepository.findById(orderId))
+                .orElseThrow(() -> new OrderNotFoundException("Order not found: " + orderId));
+    }
+
+    private void preloadOrderItemsAndProducts(List<Order> orders) {
+        if (orders == null || orders.isEmpty()) {
+            return;
+        }
+        List<Long> orderIds = orders.stream().map(Order::getId).toList();
+        orderRepository.findAllWithItemsAndProductByIdIn(orderIds);
     }
 
     private void restoreStock(Order order) {
@@ -213,11 +333,36 @@ public class OrderService {
                 .username(order.getUsername())
                 .status(order.getStatus())
                 .paymentMethod(order.getPaymentMethod())
+                .paymentProvider(order.getPaymentProvider())
+                .paymentProviderStatus(order.getPaymentProviderStatus() != null ? order.getPaymentProviderStatus() : PaymentProviderStatus.NOT_STARTED)
+                .paymentConversationId(order.getPaymentConversationId())
+                .paymentReferenceId(order.getPaymentReferenceId())
+                .paymentErrorMessage(order.getPaymentErrorMessage())
                 .totalAmount(order.getTotalAmount())
+                .subtotalAmount(order.getSubtotalAmount())
+                .discountAmount(order.getDiscountAmount())
+                .shippingFee(order.getShippingFee())
+                .taxAmount(order.getTaxAmount())
+                .couponCode(order.getCouponCode())
+                .shippingMethod(order.getShippingMethod())
+                .shippingFullName(order.getShippingFullName())
+                .shippingEmail(order.getShippingEmail())
+                .shippingPhone(order.getShippingPhone())
+                .shippingAddressLine(order.getShippingAddressLine())
+                .shippingCity(order.getShippingCity())
+                .shippingPostalCode(order.getShippingPostalCode())
+                .shippingCountry(order.getShippingCountry())
+                .trackingNumber(order.getTrackingNumber())
+                .cancelReason(order.getCancelReason())
                 .items(items)
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
                 .paidAt(order.getPaidAt())
+                .paymentInitializedAt(order.getPaymentInitializedAt())
+                .paymentFailedAt(order.getPaymentFailedAt())
+                .packedAt(order.getPackedAt())
+                .shippedAt(order.getShippedAt())
+                .deliveredAt(order.getDeliveredAt())
                 .cancelledAt(order.getCancelledAt())
                 .refundedAt(order.getRefundedAt())
                 .build();
@@ -237,8 +382,41 @@ public class OrderService {
         details.put("orderId", order.getId());
         details.put("status", order.getStatus().name());
         details.put("totalAmount", order.getTotalAmount());
+        details.put("subtotalAmount", order.getSubtotalAmount());
+        details.put("discountAmount", order.getDiscountAmount());
+        details.put("shippingFee", order.getShippingFee());
+        details.put("taxAmount", order.getTaxAmount());
+        details.put("couponCode", order.getCouponCode());
+        details.put("shippingMethod", order.getShippingMethod() != null ? order.getShippingMethod().name() : null);
+        details.put("trackingNumber", order.getTrackingNumber());
+        details.put("cancelReason", order.getCancelReason());
         details.put("paymentMethod", order.getPaymentMethod() != null ? order.getPaymentMethod().name() : null);
+        details.put("paymentProvider", order.getPaymentProvider() != null ? order.getPaymentProvider().name() : null);
+        details.put("paymentProviderStatus", order.getPaymentProviderStatus() != null ? order.getPaymentProviderStatus().name() : null);
+        details.put("paymentConversationId", order.getPaymentConversationId());
+        details.put("paymentReferenceId", order.getPaymentReferenceId());
         details.put("itemCount", order.getItems().size());
         auditService.logSystemEvent(userId, actorUsername, action, "Order event", details);
+    }
+
+    private void applyShippingAddress(Order order, ShippingAddressRequest shippingAddress) {
+        if (shippingAddress == null) {
+            return;
+        }
+        order.setShippingFullName(trimOrNull(shippingAddress.getFullName()));
+        order.setShippingEmail(trimOrNull(shippingAddress.getEmail()));
+        order.setShippingPhone(trimOrNull(shippingAddress.getPhone()));
+        order.setShippingAddressLine(trimOrNull(shippingAddress.getAddressLine()));
+        order.setShippingCity(trimOrNull(shippingAddress.getCity()));
+        order.setShippingPostalCode(trimOrNull(shippingAddress.getPostalCode()));
+        order.setShippingCountry(trimOrNull(shippingAddress.getCountry()));
+    }
+
+    private String trimOrNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

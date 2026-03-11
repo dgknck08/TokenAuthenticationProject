@@ -20,7 +20,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -35,11 +37,13 @@ public class SecurityConfig {
     private final JwtValidationService jwtValidationService;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final List<String> allowedOrigins;
+    private final List<String> allowedOriginPatterns;
 
     public SecurityConfig(JwtTokenProvider jwtTokenProvider,
                           JwtValidationService jwtValidationService,
                           JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
-                          @Value("${app.cors.allowed-origins:http://localhost:3000,http://127.0.0.1:3000,http://frontend}") String allowedOriginsCsv) {
+                          @Value("${app.cors.allowed-origins:http://localhost:3000,http://127.0.0.1:3000,http://frontend}") String allowedOriginsCsv,
+                          @Value("${app.cors.allowed-origin-patterns:https://*.iyzipay.com,https://*.iyzico.com}") String allowedOriginPatternsCsv) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.jwtValidationService = jwtValidationService;
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
@@ -47,6 +51,13 @@ public class SecurityConfig {
                 .map(String::trim)
                 .filter(origin -> !origin.isEmpty())
                 .collect(Collectors.toList());
+        List<String> configuredPatterns = Arrays.stream(allowedOriginPatternsCsv.split(","))
+                .map(String::trim)
+                .filter(pattern -> !pattern.isEmpty())
+                .collect(Collectors.toList());
+        this.allowedOriginPatterns = new ArrayList<>();
+        this.allowedOriginPatterns.addAll(this.allowedOrigins);
+        this.allowedOriginPatterns.addAll(configuredPatterns);
     }
 
     @Bean
@@ -66,9 +77,19 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
-                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh-token").permitAll()
+                .requestMatchers(
+                    "/api/auth/login",
+                    "/api/auth/register",
+                    "/api/auth/refresh-token",
+                    "/api/auth/verify-email",
+                    "/api/auth/resend-verification",
+                    "/api/auth/forgot-password",
+                    "/api/auth/reset-password",
+                    "/api/payments/iyzico/callback",
+                    "/api/payments/iyzico/webhook"
+                ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/cart/**").permitAll()
+                .requestMatchers("/api/cart/**").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
@@ -78,22 +99,26 @@ public class SecurityConfig {
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(jwtTokenProvider, jwtValidationService, allowedOrigins);
+        return new JwtAuthenticationFilter(jwtTokenProvider, jwtValidationService, allowedOrigins, allowedOriginPatterns);
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/payments/iyzico/callback", buildCorsConfiguration(Collections.singletonList("*")));
+        source.registerCorsConfiguration("/**", buildCorsConfiguration(allowedOriginPatterns));
+        return source;
+    }
+
+    private CorsConfiguration buildCorsConfiguration(List<String> originPatterns) {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(allowedOrigins);
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedOriginPatterns(originPatterns);
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type", "Set-Cookie"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
+        return configuration;
     }
 
     @Bean

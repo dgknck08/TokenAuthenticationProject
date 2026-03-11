@@ -147,8 +147,8 @@ class AuthControllerTest {
     }
 
     @Test
-    void register_whenValidRequest_returnsCreatedAndSetsCookie() throws Exception {
-        RegisterResponse registerResponse = new RegisterResponse("access-token", "refresh-token-value", "newuser", "newuser@example.com");
+    void register_whenValidRequest_returnsCreatedWithoutCookie() throws Exception {
+        RegisterResponse registerResponse = new RegisterResponse(null, null, "newuser", "newuser@example.com");
         when(authService.register(any())).thenReturn(registerResponse);
 
         String requestJson = """
@@ -163,9 +163,69 @@ class AuthControllerTest {
 
         mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content(requestJson))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.accessToken").value("access-token"))
                 .andExpect(jsonPath("$.username").value("newuser"))
-                .andExpect(cookie().value("refreshToken", "refresh-token-value"));
+                .andExpect(cookie().doesNotExist("refreshToken"));
+    }
+
+    @Test
+    void verifyEmail_whenTokenProvided_returnsOk() throws Exception {
+        mockMvc.perform(post("/api/auth/verify-email").param("token", "sample-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Email verified successfully"));
+
+        verify(authService).verifyEmail("sample-token");
+    }
+
+    @Test
+    void verifyEmail_whenTokenProvidedInBody_returnsOk() throws Exception {
+        String requestJson = """
+            {
+                "token": "sample-token-body"
+            }
+            """;
+
+        mockMvc.perform(post("/api/auth/verify-email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Email verified successfully"));
+
+        verify(authService).verifyEmail("sample-token-body");
+    }
+
+    @Test
+    void resendVerification_whenValidBody_returnsOk() throws Exception {
+        String requestJson = """
+            {
+                "email": "user@example.com"
+            }
+            """;
+
+        mockMvc.perform(post("/api/auth/resend-verification")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("If the account exists, a new verification email has been sent"));
+
+        verify(authService).resendVerificationEmail("user@example.com");
+    }
+
+    @Test
+    void resetPassword_whenValidBody_returnsOk() throws Exception {
+        String requestJson = """
+            {
+                "token": "reset-token",
+                "newPassword": "NewPassword123!"
+            }
+            """;
+
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Password reset successful"));
+
+        verify(authService).confirmPasswordReset("reset-token", "NewPassword123!");
     }
 
     @Test

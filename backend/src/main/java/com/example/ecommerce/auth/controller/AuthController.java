@@ -96,6 +96,33 @@ public class AuthController {
         return AuthResponseHandler.handleRegister(registerResponse);
     }
 
+    @PostMapping("/verify-email")
+    public ResponseEntity<Map<String, String>> verifyEmail(
+            @RequestParam(value = "token", required = false) String token,
+            @Valid @RequestBody(required = false) VerifyEmailRequest body) {
+        String resolvedToken = resolveVerificationToken(token, body);
+        authService.verifyEmail(resolvedToken);
+        return ResponseEntity.ok(Map.of("message", "Email verified successfully"));
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<Map<String, String>> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
+        authService.resendVerificationEmail(request.email());
+        return ResponseEntity.ok(Map.of("message", "If the account exists, a new verification email has been sent"));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.requestPasswordReset(request.email());
+        return ResponseEntity.ok(Map.of("message", "If the account exists, password reset instructions have been sent"));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.confirmPasswordReset(request.token(), request.newPassword());
+        return ResponseEntity.ok(Map.of("message", "Password reset successful"));
+    }
+
     @PostMapping("/refresh-token")
     public ResponseEntity<RefreshTokenResponse> refreshToken(HttpServletRequest request) {
         String refreshToken = CookieUtil.getRefreshTokenFromCookie(request);
@@ -198,6 +225,16 @@ public class AuthController {
             return request.getRemoteAddr();
         }
         return xfHeader.split(",")[0];
+    }
+
+    private String resolveVerificationToken(String token, VerifyEmailRequest body) {
+        if (body != null && body.token() != null && !body.token().isBlank()) {
+            return body.token().trim();
+        }
+        if (token == null || token.isBlank()) {
+            throw new IllegalArgumentException("Verification token is required");
+        }
+        return token.trim();
     }
 	
 }

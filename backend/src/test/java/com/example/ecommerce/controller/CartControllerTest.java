@@ -9,8 +9,8 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -28,8 +28,9 @@ import com.example.ecommerce.cart.dto.CartDto;
 import com.example.ecommerce.cart.dto.UpdateCartItemRequest;
 import com.example.ecommerce.cart.service.CartService;
 
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletResponse;
 
 @ExtendWith(MockitoExtension.class)
 class CartControllerTest {
@@ -41,10 +42,14 @@ class CartControllerTest {
     private HttpServletRequest request;
 
     @Mock
-    private HttpSession session;
+    private HttpServletResponse response;
 
-    @InjectMocks
     private CartController cartController;
+
+    @BeforeEach
+    void setUp() {
+        cartController = new CartController(cartService, false);
+    }
 
     private CartDto sampleCart() {
         return new CartDto(List.of(), 0, BigDecimal.ZERO, "guest");
@@ -72,35 +77,33 @@ class CartControllerTest {
         Authentication auth = authenticatedUser(10L, "alice");
         when(cartService.getCartByUserId(10L)).thenReturn(sampleCart());
 
-        ResponseEntity<CartDto> response = cartController.getCart(request, auth);
+        ResponseEntity<CartDto> responseEntity = cartController.getCart(request, response, auth);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
         verify(cartService).getCartByUserId(10L);
     }
 
     @Test
     void getCart_ShouldReturnGuestCart_WhenAuthenticationMissing() {
-        when(request.getSession(true)).thenReturn(session);
-        when(session.getId()).thenReturn("sess-1");
-        when(cartService.getGuestCart("sess-1")).thenReturn(sampleCart());
+        when(request.getCookies()).thenReturn(new Cookie[] { new Cookie("guest_cart_id", "guest-1") });
+        when(cartService.getGuestCart("guest-1")).thenReturn(sampleCart());
 
-        ResponseEntity<CartDto> response = cartController.getCart(request, null);
+        ResponseEntity<CartDto> responseEntity = cartController.getCart(request, response, null);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(cartService).getGuestCart("sess-1");
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+        verify(cartService).getGuestCart("guest-1");
     }
 
     @Test
     void getCart_ShouldReturnGuestCart_WhenAuthenticationAnonymous() {
         Authentication auth = anonymousUser();
-        when(request.getSession(true)).thenReturn(session);
-        when(session.getId()).thenReturn("sess-anon");
-        when(cartService.getGuestCart("sess-anon")).thenReturn(sampleCart());
+        when(request.getCookies()).thenReturn(new Cookie[] { new Cookie("guest_cart_id", "guest-anon") });
+        when(cartService.getGuestCart("guest-anon")).thenReturn(sampleCart());
 
-        ResponseEntity<CartDto> response = cartController.getCart(request, auth);
+        ResponseEntity<CartDto> responseEntity = cartController.getCart(request, response, auth);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(cartService).getGuestCart("sess-anon");
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+        verify(cartService).getGuestCart("guest-anon");
     }
 
     @Test
@@ -112,9 +115,9 @@ class CartControllerTest {
 
         when(cartService.addItemToCart(11L, 100L, 2)).thenReturn(sampleCart());
 
-        ResponseEntity<CartDto> response = cartController.addItemToCart(add, request, auth);
+        ResponseEntity<CartDto> responseEntity = cartController.addItemToCart(add, request, response, auth);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
         verify(cartService).addItemToCart(11L, 100L, 2);
     }
 
@@ -123,28 +126,26 @@ class CartControllerTest {
         AddToCartRequest add = new AddToCartRequest();
         add.setProductId(200L);
         add.setQuantity(1);
-        when(request.getSession(true)).thenReturn(session);
-        when(session.getId()).thenReturn("sess-2");
-        when(cartService.addItemToGuestCart("sess-2", 200L, 1)).thenReturn(sampleCart());
+        when(request.getCookies()).thenReturn(new Cookie[] { new Cookie("guest_cart_id", "guest-2") });
+        when(cartService.addItemToGuestCart("guest-2", 200L, 1)).thenReturn(sampleCart());
 
-        ResponseEntity<CartDto> response = cartController.addItemToCart(add, request, null);
+        ResponseEntity<CartDto> responseEntity = cartController.addItemToCart(add, request, response, null);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(cartService).addItemToGuestCart("sess-2", 200L, 1);
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+        verify(cartService).addItemToGuestCart("guest-2", 200L, 1);
     }
 
     @Test
     void updateCartItem_ShouldUseGuestFlow() {
         UpdateCartItemRequest update = new UpdateCartItemRequest();
         update.setQuantity(3);
-        when(request.getSession(true)).thenReturn(session);
-        when(session.getId()).thenReturn("sess-3");
-        when(cartService.updateGuestCartItem("sess-3", 300L, 3)).thenReturn(sampleCart());
+        when(request.getCookies()).thenReturn(new Cookie[] { new Cookie("guest_cart_id", "guest-3") });
+        when(cartService.updateGuestCartItem("guest-3", 300L, 3)).thenReturn(sampleCart());
 
-        ResponseEntity<CartDto> response = cartController.updateCartItem(300L, update, request, null);
+        ResponseEntity<CartDto> responseEntity = cartController.updateCartItem(300L, update, request, response, null);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(cartService).updateGuestCartItem("sess-3", 300L, 3);
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+        verify(cartService).updateGuestCartItem("guest-3", 300L, 3);
     }
 
     @Test
@@ -152,50 +153,48 @@ class CartControllerTest {
         Authentication auth = authenticatedUser(20L, "charlie");
         when(cartService.removeItemFromCart(20L, 400L)).thenReturn(sampleCart());
 
-        ResponseEntity<CartDto> response = cartController.removeItemFromCart(400L, request, auth);
+        ResponseEntity<CartDto> responseEntity = cartController.removeItemFromCart(400L, request, response, auth);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
         verify(cartService).removeItemFromCart(20L, 400L);
     }
 
     @Test
     void clearCart_ShouldUseGuestFlow() {
-        when(request.getSession(true)).thenReturn(session);
-        when(session.getId()).thenReturn("sess-4");
+        when(request.getCookies()).thenReturn(new Cookie[] { new Cookie("guest_cart_id", "guest-4") });
 
-        ResponseEntity<Void> response = cartController.clearCart(request, null);
+        ResponseEntity<Void> responseEntity = cartController.clearCart(request, response, null);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(cartService).clearGuestCart("sess-4");
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+        verify(cartService).clearGuestCart("guest-4");
     }
 
     @Test
     void mergeGuestCart_ShouldReturnUnauthorized_WhenUserIsNotAuthenticated() {
-        ResponseEntity<CartDto> response = cartController.mergeGuestCart(request, null);
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        ResponseEntity<CartDto> responseEntity = cartController.mergeGuestCart(request, response, null);
+        assertEquals(HttpStatus.UNAUTHORIZED, responseEntity.getStatusCode());
     }
 
     @Test
     void mergeGuestCart_ShouldReturnBadRequest_WhenNoSession() {
         Authentication auth = authenticatedUser(22L, "david");
-        when(request.getSession(false)).thenReturn(null);
+        when(request.getCookies()).thenReturn(null);
 
-        ResponseEntity<CartDto> response = cartController.mergeGuestCart(request, auth);
+        ResponseEntity<CartDto> responseEntity = cartController.mergeGuestCart(request, response, auth);
 
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST, responseEntity.getStatusCode());
     }
 
     @Test
     void mergeGuestCart_ShouldReturnOk_WhenAuthenticatedAndSessionExists() {
         Authentication auth = authenticatedUser(23L, "eve");
-        when(request.getSession(false)).thenReturn(session);
-        when(session.getId()).thenReturn("sess-5");
-        when(cartService.mergeGuestCartToUserCart("sess-5", 23L)).thenReturn(sampleCart());
+        when(request.getCookies()).thenReturn(new Cookie[] { new Cookie("guest_cart_id", "guest-5") });
+        when(cartService.mergeGuestCartToUserCart("guest-5", 23L)).thenReturn(sampleCart());
 
-        ResponseEntity<CartDto> response = cartController.mergeGuestCart(request, auth);
+        ResponseEntity<CartDto> responseEntity = cartController.mergeGuestCart(request, response, auth);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(cartService).mergeGuestCartToUserCart("sess-5", 23L);
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+        verify(cartService).mergeGuestCartToUserCart("guest-5", 23L);
     }
 
     @Test
@@ -204,8 +203,8 @@ class CartControllerTest {
         when(auth.isAuthenticated()).thenReturn(true);
         when(auth.getPrincipal()).thenReturn("string-principal");
 
-        ResponseEntity<CartDto> response = cartController.mergeGuestCart(request, auth);
+        ResponseEntity<CartDto> responseEntity = cartController.mergeGuestCart(request, response, auth);
 
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertEquals(HttpStatus.UNAUTHORIZED, responseEntity.getStatusCode());
     }
 }

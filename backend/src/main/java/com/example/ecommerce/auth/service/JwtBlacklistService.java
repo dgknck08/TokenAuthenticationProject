@@ -11,6 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -25,6 +27,7 @@ public class JwtBlacklistService {
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
     private static final String TOKEN_METADATA_KEY = "jwt:metadata:";
     private static final String USER_TOKENS_KEY = "jwt:user_tokens:";
+    private static final String USER_TOKEN_REF_SEPARATOR = ":";
     
     private final RedisTemplate<String, Object> redisTemplate;
     private final JwtUtils jwtUtils;
@@ -39,7 +42,8 @@ public class JwtBlacklistService {
      */
     public void blacklistToken(String token) {
         try {
-            String key = BLACKLIST_PREFIX + token;
+            String tokenHash = hashToken(token);
+            String key = BLACKLIST_PREFIX + tokenHash;
             
             Instant expiration = jwtUtils.getExpirationDate(token);
             long ttl = Duration.between(Instant.now(), expiration).getSeconds();
@@ -64,9 +68,15 @@ public class JwtBlacklistService {
      */
     public boolean isTokenBlacklisted(String token) {
         try {
-            String key = BLACKLIST_PREFIX + token;
-            Boolean exists = redisTemplate.hasKey(key);
-            return Boolean.TRUE.equals(exists);
+            String tokenHash = hashToken(token);
+            Boolean hashedExists = redisTemplate.hasKey(BLACKLIST_PREFIX + tokenHash);
+            if (Boolean.TRUE.equals(hashedExists)) {
+                return true;
+            }
+
+            // Backward compatibility for previously stored raw-token blacklist keys.
+            Boolean legacyExists = redisTemplate.hasKey(BLACKLIST_PREFIX + token);
+            return Boolean.TRUE.equals(legacyExists);
         } catch (Exception e) {
             logger.error("Error checking token blacklist status: {}", e.getMessage());
             return true; // Hata durumunda token geçersiz sayilir.
@@ -85,14 +95,13 @@ public class JwtBlacklistService {
             
             if (!userTokens.isEmpty()) {
                 // Pipeline ile tüm tokenları blackliste ekler
-                List<Object> results = redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
-                    for (String token : userTokens) {
+                redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+                    for (String tokenRef : userTokens) {
                         try {
-                            Instant expiration = jwtUtils.getExpirationDate(token);
-                            long ttl = Duration.between(Instant.now(), expiration).getSeconds();
-                            
-                            if (ttl > 0) {
-                                String blacklistKey = BLACKLIST_PREFIX + token;
+                            String tokenHash = extractTokenHashFromReference(tokenRef);
+                            long ttl = resolveTtlSecondsFromReference(tokenRef);
+                            if (tokenHash != null && ttl > 0) {
+                                String blacklistKey = BLACKLIST_PREFIX + tokenHash;
                                 connection.setEx(
                                     blacklistKey.getBytes(StandardCharsets.UTF_8), 
                                     ttl, 
@@ -135,12 +144,16 @@ public class JwtBlacklistService {
             metadata.put("userAgent", userAgent);
             metadata.put("issuedAt", Instant.now().toString());
             metadata.put("deviceFingerprint", generateDeviceFingerprint(userAgent, ipAddress));
-            metadata.put("token", token); // Token'ı da metadata'ya ekle
             
             Instant expiration = jwtUtils.getExpirationDate(token);
             long ttl = Duration.between(Instant.now(), expiration).getSeconds();
             
             if (ttl > 0) {
+                String tokenHash = hashToken(token);
+                String tokenRef = buildTokenReference(tokenHash, expiration);
+                metadata.put("tokenHash", tokenHash);
+                metadata.put("expiresAt", expiration.toString());
+
                 // Pipeline ile hem metadata'yı sakla hem de kullanıcı token listesine ekle
                 redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
                     // Metadatayı saklar 
@@ -151,7 +164,7 @@ public class JwtBlacklistService {
                     
                     // Kullanıcının token listesine ekler
                     String userTokensKey = USER_TOKENS_KEY + username;
-                    connection.sAdd(userTokensKey.getBytes(), token.getBytes());
+                    connection.sAdd(userTokensKey.getBytes(), tokenRef.getBytes(StandardCharsets.UTF_8));
                     connection.expire(userTokensKey.getBytes(), ttl);
                     
                     return null;
@@ -187,14 +200,16 @@ public class JwtBlacklistService {
     public Set<String> getUserTokens(String username) {
         try {
             String key = USER_TOKENS_KEY + username;
-            Set<Object> rawTokens = redisTemplate.opsForSet().members(key);
-            
-            Set<String> tokens = new HashSet<>();
-            if (rawTokens != null) {
-                rawTokens.forEach(token -> tokens.add(token.toString()));
-            }
-            
-            return tokens;
+            Set<String> tokens = redisTemplate.execute((RedisCallback<Set<String>>) connection -> {
+                Set<byte[]> rawTokens = connection.sMembers(key.getBytes(StandardCharsets.UTF_8));
+                Set<String> references = new HashSet<>();
+                if (rawTokens != null) {
+                    rawTokens.forEach(token -> references.add(new String(token, StandardCharsets.UTF_8)));
+                }
+                return references;
+            });
+
+            return tokens != null ? tokens : new HashSet<>();
         } catch (Exception e) {
             logger.error("Error getting user tokens: {}", e.getMessage());
             return new HashSet<>();
@@ -204,7 +219,22 @@ public class JwtBlacklistService {
     private void removeTokenFromUserList(String username, String token) {
         try {
             String key = USER_TOKENS_KEY + username;
-            redisTemplate.opsForSet().remove(key, token);
+            String tokenHash = hashToken(token);
+            Set<String> tokenRefs = getUserTokens(username);
+            if (tokenRefs.isEmpty()) {
+                return;
+            }
+
+            redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+                byte[] userTokensKey = key.getBytes(StandardCharsets.UTF_8);
+                for (String tokenRef : tokenRefs) {
+                    String refHash = extractTokenHashFromReference(tokenRef);
+                    if (tokenHash.equals(refHash) || token.equals(tokenRef)) {
+                        connection.sRem(userTokensKey, tokenRef.getBytes(StandardCharsets.UTF_8));
+                    }
+                }
+                return null;
+            });
         } catch (Exception e) {
             logger.error("Error removing token from user list: {}", e.getMessage());
         }
@@ -276,23 +306,8 @@ public class JwtBlacklistService {
                     .scan(options)) {
                 while (cursor.hasNext()) {
                     String key = new String(cursor.next(), StandardCharsets.UTF_8);
-                    Map<Object, Object> raw = redisTemplate.opsForHash().entries(key);
-                    Object tokenObj = raw.get("token");
-                    if (tokenObj == null) {
-                        redisTemplate.delete(key);
-                        deleted++;
-                        continue;
-                    }
-
-                    String token = tokenObj.toString();
-                    try {
-                        Instant expiration = jwtUtils.getExpirationDate(token);
-                        if (expiration.isBefore(Instant.now()) || isTokenBlacklisted(token)) {
-                            redisTemplate.delete(key);
-                            deleted++;
-                        }
-                    } catch (Exception e) {
-                        // Token parse edilemiyorsa metadata'yı temizle
+                    Long ttlSeconds = redisTemplate.getExpire(key, TimeUnit.SECONDS);
+                    if (ttlSeconds == null || ttlSeconds <= 0) {
                         redisTemplate.delete(key);
                         deleted++;
                     }
@@ -319,6 +334,70 @@ public class JwtBlacklistService {
                        value.toString().getBytes(StandardCharsets.UTF_8));
         });
         return byteMap;
+    }
+
+    private String buildTokenReference(String tokenHash, Instant expiration) {
+        return tokenHash + USER_TOKEN_REF_SEPARATOR + expiration.getEpochSecond();
+    }
+
+    private String extractTokenHashFromReference(String tokenReference) {
+        if (tokenReference == null || tokenReference.isBlank()) {
+            return null;
+        }
+
+        int separatorIndex = tokenReference.indexOf(USER_TOKEN_REF_SEPARATOR);
+        if (separatorIndex > 0) {
+            return tokenReference.substring(0, separatorIndex);
+        }
+
+        // Legacy format where raw JWT itself was stored in Redis set.
+        if (tokenReference.contains(".")) {
+            return hashToken(tokenReference);
+        }
+
+        // Legacy hash-only format.
+        return tokenReference;
+    }
+
+    private long resolveTtlSecondsFromReference(String tokenReference) {
+        if (tokenReference == null || tokenReference.isBlank()) {
+            return -1;
+        }
+
+        int separatorIndex = tokenReference.indexOf(USER_TOKEN_REF_SEPARATOR);
+        if (separatorIndex > 0 && separatorIndex + 1 < tokenReference.length()) {
+            try {
+                long expirationEpochSecond = Long.parseLong(tokenReference.substring(separatorIndex + 1));
+                return expirationEpochSecond - Instant.now().getEpochSecond();
+            } catch (NumberFormatException ignored) {
+                // Fallback to legacy handling below.
+            }
+        }
+
+        // Legacy format where raw JWT itself was stored in Redis set.
+        if (tokenReference.contains(".")) {
+            try {
+                Instant expiration = jwtUtils.getExpirationDate(tokenReference);
+                return Duration.between(Instant.now(), expiration).getSeconds();
+            } catch (Exception ignored) {
+                return -1;
+            }
+        }
+
+        return -1;
+    }
+
+    private String hashToken(String token) {
+        if (token == null || token.isBlank()) {
+            throw new IllegalArgumentException("Token is required");
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 algorithm is not available", e);
+        }
     }
 
     private String sanitizeForLog(String value) {

@@ -143,7 +143,7 @@ class ProductServiceTest {
     @Test
     void searchProducts_ShouldReturnPagedDtoResult() {
         Product product = new Product(10L, "Amp", "Tube amp", new BigDecimal("799.00"), "img", "Amplifier", 4);
-        when(productRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(PageRequest.of(0, 10))))
+        when(productRepository.searchProductsAdvanced(eq("Amplifier"), eq((String) null), eq("tube"), eq(PageRequest.of(0, 10))))
                 .thenReturn(new PageImpl<>(List.of(product)));
 
         var result = productService.searchProducts("Amplifier", null, "tube", PageRequest.of(0, 10));

@@ -1,5 +1,8 @@
 package com.example.ecommerce.profile.service;
 
+import java.util.Comparator;
+import java.util.List;
+
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,11 +60,16 @@ public class ProfileService {
         dto.setId(user.getId());
         dto.setUsername(user.getUsername());
         dto.setEmail(user.getEmail());
-        String roleName = user.getRoles().stream()
-                              .map(role -> role.name(	)) // Role -> String
-                              .findFirst()
-                              .orElse("NO_ROLE");
+        List<String> roleNames = user.getRoles().stream()
+                .map(Enum::name)
+                .sorted(Comparator.naturalOrder())
+                .toList();
+        String roleName = roleNames.stream()
+                .filter(role -> "ROLE_ADMIN".equals(role))
+                .findFirst()
+                .orElse(roleNames.stream().findFirst().orElse("NO_ROLE"));
         dto.setRole(roleName);
+        dto.setRoles(roleNames);
         dto.setFirstName(user.getFirstName());
         dto.setLastName(user.getLastName());
         return dto;

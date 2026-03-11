@@ -31,7 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
-# Gizli konfigürasyon dosyaları
 config.properties
 application.yml
 .env
@@ -39,7 +38,6 @@ application.yml
 *.env
 application.properties
 application-test.properties
-# Derleme çıktı klasörleri
 target/
 bin/
 
@@ -56,3 +54,23 @@ logs/
 # OS sistem dosyaları
 .DS_Store
 Thumbs.db
+
+# Internal docs kept local only
+cdx/readmes/
+docs/readmes/
+
+# Local tooling/cache folders
+.m2home/
+AppData/
+
+# Keep all Codex scratch artifacts out of git
+cdx/
+
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.secret
+*.secrets

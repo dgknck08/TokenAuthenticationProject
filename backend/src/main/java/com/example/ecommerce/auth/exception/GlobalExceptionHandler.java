@@ -3,6 +3,7 @@ package com.example.ecommerce.auth.exception;
 import com.example.ecommerce.common.api.ApiErrorResponse;
 import com.example.ecommerce.order.exception.OrderAccessDeniedException;
 import com.example.ecommerce.order.exception.OrderNotFoundException;
+import com.example.ecommerce.order.exception.ReturnRequestNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +48,24 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleInvalidCredentials(InvalidCredentialsException ex, HttpServletRequest request) {
         logger.warn("InvalidCredentialsException: {}", ex.getMessage());
         return buildResponse(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "Geçersiz kullanıcı bilgileri.", request);
+    }
+
+    @ExceptionHandler(EmailNotVerifiedException.class)
+    public ResponseEntity<ApiErrorResponse> handleEmailNotVerified(EmailNotVerifiedException ex, HttpServletRequest request) {
+        logger.warn("EmailNotVerifiedException: {}", ex.getMessage());
+        return buildResponse(HttpStatus.FORBIDDEN, "EMAIL_NOT_VERIFIED", "Email adresinizi doğrulamanız gerekiyor.", request);
+    }
+
+    @ExceptionHandler(EmailVerificationException.class)
+    public ResponseEntity<ApiErrorResponse> handleEmailVerificationException(EmailVerificationException ex, HttpServletRequest request) {
+        logger.warn("EmailVerificationException: {}", ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, "EMAIL_VERIFICATION_FAILED", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(PasswordResetException.class)
+    public ResponseEntity<ApiErrorResponse> handlePasswordResetException(PasswordResetException ex, HttpServletRequest request) {
+        logger.warn("PasswordResetException: {}", ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, "PASSWORD_RESET_FAILED", ex.getMessage(), request);
     }
 
     @ExceptionHandler(UserNotFoundException.class)
@@ -98,6 +117,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleOrderAccessDenied(OrderAccessDeniedException ex, HttpServletRequest request) {
         logger.warn("OrderAccessDeniedException: {}", ex.getMessage());
         return buildResponse(HttpStatus.FORBIDDEN, "ACCESS_DENIED", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(ReturnRequestNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleReturnRequestNotFound(ReturnRequestNotFoundException ex, HttpServletRequest request) {
+        logger.warn("ReturnRequestNotFoundException: {}", ex.getMessage());
+        return buildResponse(HttpStatus.NOT_FOUND, "RETURN_REQUEST_NOT_FOUND", ex.getMessage(), request);
     }
 
     @ExceptionHandler({AccessDeniedException.class, AuthorizationDeniedException.class})

@@ -12,4 +12,12 @@ public interface AuthService {
 	    LoginResponse login(LoginRequest request);
 
 	    RefreshTokenResponse refreshToken(String refreshToken);
+
+        void verifyEmail(String token);
+
+        void resendVerificationEmail(String email);
+
+        void requestPasswordReset(String email);
+
+        void confirmPasswordReset(String token, String newPassword);
 }

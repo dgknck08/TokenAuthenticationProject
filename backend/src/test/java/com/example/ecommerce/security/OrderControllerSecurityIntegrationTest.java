@@ -4,10 +4,10 @@ import com.example.ecommerce.auth.security.JwtAuthenticationEntryPoint;
 import com.example.ecommerce.auth.security.JwtTokenProvider;
 import com.example.ecommerce.auth.security.SecurityConfig;
 import com.example.ecommerce.auth.service.JwtValidationService;
+import com.example.ecommerce.common.idempotency.IdempotencyService;
 import com.example.ecommerce.order.controller.OrderController;
 import com.example.ecommerce.order.dto.OrderResponse;
 import com.example.ecommerce.order.model.OrderStatus;
-import com.example.ecommerce.order.model.PaymentMethod;
 import com.example.ecommerce.order.service.OrderService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,13 +17,13 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
-import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -40,6 +40,9 @@ class OrderControllerSecurityIntegrationTest {
 
     @MockBean
     private OrderService orderService;
+
+    @MockBean
+    private IdempotencyService idempotencyService;
 
     @MockBean
     private JwtTokenProvider jwtTokenProvider;
@@ -68,6 +71,7 @@ class OrderControllerSecurityIntegrationTest {
                 .status(OrderStatus.CREATED)
                 .totalAmount(new BigDecimal("100.00"))
                 .build();
+        when(idempotencyService.findReplayResponse(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
         when(orderService.getMyOrders(org.mockito.ArgumentMatchers.eq("user"), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(response)));
 
@@ -77,33 +81,29 @@ class OrderControllerSecurityIntegrationTest {
     }
 
     @Test
-    void payOrder_withOrderWriteAuthority_returnsOk() throws Exception {
+    void cancelOrder_requiresOrderWriteAuthority() throws Exception {
+        stubToken("token-order-read", "user", "ORDER_READ");
+
+        mockMvc.perform(post("/api/orders/1/cancel")
+                        .header("Authorization", "Bearer token-order-read"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void cancelOrder_withOrderWriteAuthority_returnsOk() throws Exception {
         stubToken("token-order-write", "user", "ORDER_WRITE");
         OrderResponse response = OrderResponse.builder()
                 .id(1L)
                 .username("user")
-                .status(OrderStatus.PAID)
-                .paymentMethod(PaymentMethod.CARD)
+                .status(OrderStatus.CANCELLED)
                 .totalAmount(new BigDecimal("100.00"))
                 .build();
-        when(orderService.payMyOrder(org.mockito.ArgumentMatchers.eq("user"), org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any()))
-                .thenReturn(response);
+        when(idempotencyService.findReplayResponse(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
+        when(orderService.cancelMyOrder("user", 1L, null)).thenReturn(response);
 
-        mockMvc.perform(post("/api/orders/1/pay")
-                        .header("Authorization", "Bearer token-order-write")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"paymentMethod\":\"CARD\"}"))
+        mockMvc.perform(post("/api/orders/1/cancel")
+                        .header("Authorization", "Bearer token-order-write"))
                 .andExpect(status().isOk());
-    }
-
-    @Test
-    void payOrder_withoutWriteAuthority_returnsForbidden() throws Exception {
-        stubToken("token-order-read-only", "user", "ORDER_READ");
-        mockMvc.perform(post("/api/orders/1/pay")
-                        .header("Authorization", "Bearer token-order-read-only")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"paymentMethod\":\"CARD\"}"))
-                .andExpect(status().isForbidden());
     }
 
     private void stubToken(String token, String username, String authority) {

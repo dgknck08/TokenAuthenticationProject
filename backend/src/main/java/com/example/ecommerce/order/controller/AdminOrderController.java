@@ -1,7 +1,9 @@
 package com.example.ecommerce.order.controller;
 
 import com.example.ecommerce.common.api.ApiErrorResponse;
+import com.example.ecommerce.order.dto.CancelOrderRequest;
 import com.example.ecommerce.order.dto.OrderResponse;
+import com.example.ecommerce.order.dto.ShipOrderRequest;
 import com.example.ecommerce.order.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -20,8 +22,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/admin/orders")
@@ -46,8 +50,10 @@ public class AdminOrderController {
     @Operation(summary = "Cancel Order", description = "Cancels a CREATED order and restores stock", security = @SecurityRequirement(name = "bearerAuth"))
     @ApiResponse(responseCode = "200", description = "Order cancelled", content = @Content(schema = @Schema(implementation = OrderResponse.class)))
     @ApiResponse(responseCode = "400", description = "Invalid state", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
-    public ResponseEntity<OrderResponse> cancelOrder(@PathVariable Long id) {
-        return ResponseEntity.ok(orderService.cancelOrderForAdmin(id, getCurrentUsername()));
+    public ResponseEntity<OrderResponse> cancelOrder(@PathVariable Long id,
+                                                     @Valid @RequestBody(required = false) CancelOrderRequest request) {
+        String cancelReason = request != null ? request.getReason() : null;
+        return ResponseEntity.ok(orderService.cancelOrderForAdmin(id, getCurrentUsername(), cancelReason));
     }
 
     @PostMapping("/{id}/refund")
@@ -57,6 +63,33 @@ public class AdminOrderController {
     @ApiResponse(responseCode = "400", description = "Invalid state", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     public ResponseEntity<OrderResponse> refundOrder(@PathVariable Long id) {
         return ResponseEntity.ok(orderService.refundOrderForAdmin(id, getCurrentUsername()));
+    }
+
+    @PostMapping("/{id}/pack")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Pack Order", description = "Moves a PAID order to PACKED", security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponse(responseCode = "200", description = "Order packed", content = @Content(schema = @Schema(implementation = OrderResponse.class)))
+    @ApiResponse(responseCode = "400", description = "Invalid state", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    public ResponseEntity<OrderResponse> packOrder(@PathVariable Long id) {
+        return ResponseEntity.ok(orderService.packOrderForAdmin(id, getCurrentUsername()));
+    }
+
+    @PostMapping("/{id}/ship")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Ship Order", description = "Moves a PACKED order to SHIPPED and stores tracking number", security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponse(responseCode = "200", description = "Order shipped", content = @Content(schema = @Schema(implementation = OrderResponse.class)))
+    @ApiResponse(responseCode = "400", description = "Invalid state", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    public ResponseEntity<OrderResponse> shipOrder(@PathVariable Long id, @Valid @RequestBody ShipOrderRequest request) {
+        return ResponseEntity.ok(orderService.shipOrderForAdmin(id, request, getCurrentUsername()));
+    }
+
+    @PostMapping("/{id}/deliver")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Deliver Order", description = "Moves a SHIPPED order to DELIVERED", security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponse(responseCode = "200", description = "Order delivered", content = @Content(schema = @Schema(implementation = OrderResponse.class)))
+    @ApiResponse(responseCode = "400", description = "Invalid state", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    public ResponseEntity<OrderResponse> deliverOrder(@PathVariable Long id) {
+        return ResponseEntity.ok(orderService.deliverOrderForAdmin(id, getCurrentUsername()));
     }
 
     private String getCurrentUsername() {

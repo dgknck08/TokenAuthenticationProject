@@ -1,6 +1,7 @@
 package com.example.ecommerce.auth.service.impl;
 
 import com.example.ecommerce.auth.dto.*;
+import com.example.ecommerce.auth.exception.EmailNotVerifiedException;
 
 import com.example.ecommerce.auth.exception.InvalidCredentialsException;
 import com.example.ecommerce.auth.exception.UserAlreadyExistsException;
@@ -8,6 +9,8 @@ import com.example.ecommerce.auth.exception.UserNotFoundException;
 import com.example.ecommerce.auth.model.User;
 import com.example.ecommerce.auth.security.JwtTokenProvider;
 import com.example.ecommerce.auth.service.AuthService;
+import com.example.ecommerce.auth.service.EmailVerificationService;
+import com.example.ecommerce.auth.service.PasswordResetService;
 import com.example.ecommerce.auth.service.RefreshTokenService;
 import com.example.ecommerce.auth.service.UserService;
 
@@ -30,15 +33,21 @@ public class AuthServiceImpl implements AuthService{
     private final UserService userService;  
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
+    private final EmailVerificationService emailVerificationService;
+    private final PasswordResetService passwordResetService;
     private final AuthenticationManager authenticationManager;
 
     public AuthServiceImpl(UserService userService,
                        JwtTokenProvider jwtTokenProvider,
                        RefreshTokenService refreshTokenService,
+                       EmailVerificationService emailVerificationService,
+                       PasswordResetService passwordResetService,
                        AuthenticationManager authenticationManager) {
         this.userService = userService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.refreshTokenService = refreshTokenService;
+        this.emailVerificationService = emailVerificationService;
+        this.passwordResetService = passwordResetService;
         this.authenticationManager = authenticationManager;
     }
 
@@ -66,14 +75,10 @@ public class AuthServiceImpl implements AuthService{
         validateRegisterRequest(normalizedRequest);
         
         User user = userService.createUser(normalizedRequest);
-        String accessToken = jwtTokenProvider.generateTokenWithUsername(
-            user.getUsername(),
-            user.getRoles().stream().map(r -> r.name()).toList()
-        );
-        String refreshToken = refreshTokenService.createRefreshToken(user.getId());
+        emailVerificationService.createAndSendVerification(user);
         
         logger.info("User registered successfully: {}", user.getUsername());
-        return new RegisterResponse(accessToken, refreshToken, user.getUsername(), user.getEmail());
+        return new RegisterResponse(null, null, user.getUsername(), user.getEmail());
     }
 
     /**
@@ -97,6 +102,9 @@ public class AuthServiceImpl implements AuthService{
             String accessToken = jwtTokenProvider.generateToken(authentication);
             User user = userService.findByUsername(normalizedUsername)
                                    .orElseThrow(() -> new InvalidCredentialsException("Invalid username or password"));
+            if (!user.isEmailVerified()) {
+                throw new EmailNotVerifiedException("Email is not verified");
+            }
             
             String refreshToken = refreshTokenService.createRefreshToken(user.getId());
             
@@ -144,6 +152,31 @@ public class AuthServiceImpl implements AuthService{
         if (userService.findByEmail(request.email()).isPresent()) {
             throw new UserAlreadyExistsException("Email is already registered");
         }
+    }
+
+    @Override
+    public void verifyEmail(String token) {
+        emailVerificationService.verifyToken(token);
+    }
+
+    @Override
+    public void resendVerificationEmail(String email) {
+        emailVerificationService.resendVerification(email);
+    }
+
+    @Override
+    public void requestPasswordReset(String email) {
+        String normalizedEmail = normalizeEmail(email);
+        if (normalizedEmail == null || normalizedEmail.isBlank()) {
+            return;
+        }
+        passwordResetService.requestReset(normalizedEmail);
+        logger.info("Password reset requested");
+    }
+
+    @Override
+    public void confirmPasswordReset(String token, String newPassword) {
+        passwordResetService.resetPassword(token, newPassword);
     }
 
     private String normalizeUsername(String username) {

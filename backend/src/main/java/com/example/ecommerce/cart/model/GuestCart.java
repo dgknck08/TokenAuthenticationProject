@@ -1,18 +1,20 @@
 package com.example.ecommerce.cart.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.Data;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class GuestCart implements Serializable {
     private String sessionId;
     private Map<Long, GuestCartItem> items = new HashMap<>();
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Long createdAt;
+    private Long updatedAt;
     
     public void addItem(Long productId, int quantity, BigDecimal unitPrice, String productName) {
         GuestCartItem existingItem = items.get(productId);
@@ -26,7 +28,7 @@ public class GuestCart implements Serializable {
             newItem.setUnitPrice(unitPrice);
             items.put(productId, newItem);
         }
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = System.currentTimeMillis();
     }
     
     public void updateItemQuantity(Long productId, int quantity) {
@@ -38,20 +40,22 @@ public class GuestCart implements Serializable {
                 item.setQuantity(quantity);
             }
         }
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = System.currentTimeMillis();
     }
     
     public void removeItem(Long productId) {
         items.remove(productId);
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = System.currentTimeMillis();
     }
     
+    @JsonIgnore
     public BigDecimal getTotalAmount() {
         return items.values().stream()
                 .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
     
+    @JsonIgnore
     public int getTotalItems() {
         return items.values().stream()
                 .mapToInt(GuestCartItem::getQuantity)

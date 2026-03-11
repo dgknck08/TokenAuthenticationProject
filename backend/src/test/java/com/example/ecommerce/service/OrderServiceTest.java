@@ -10,10 +10,12 @@ import com.example.ecommerce.order.exception.OrderAccessDeniedException;
 import com.example.ecommerce.order.model.Order;
 import com.example.ecommerce.order.model.OrderItem;
 import com.example.ecommerce.order.model.OrderStatus;
-import com.example.ecommerce.order.model.PaymentMethod;
+import com.example.ecommerce.order.model.ShippingMethod;
 import com.example.ecommerce.order.repository.OrderRepository;
+import com.example.ecommerce.order.service.CheckoutPricingService;
+import com.example.ecommerce.order.service.OrderPricingItem;
+import com.example.ecommerce.order.service.OrderPricingResult;
 import com.example.ecommerce.order.service.OrderService;
-import com.example.ecommerce.order.dto.PayOrderRequest;
 import com.example.ecommerce.product.model.Product;
 import com.example.ecommerce.product.repository.ProductRepository;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -44,6 +47,8 @@ class OrderServiceTest {
     @Mock
     private InventoryService inventoryService;
     @Mock
+    private CheckoutPricingService checkoutPricingService;
+    @Mock
     private AuditService auditService;
 
     private OrderService orderService;
@@ -55,6 +60,7 @@ class OrderServiceTest {
                 userRepository,
                 productRepository,
                 inventoryService,
+                checkoutPricingService,
                 auditService,
                 new SimpleMeterRegistry()
         );
@@ -79,7 +85,18 @@ class OrderServiceTest {
         request.setItems(List.of(item));
 
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
-        when(productRepository.findById(5L)).thenReturn(Optional.of(product));
+        when(checkoutPricingService.buildPricing(any(), any(), any(), any()))
+                .thenReturn(new OrderPricingResult(
+                        List.of(new OrderPricingItem(product, 2)),
+                        new BigDecimal("2000.00"),
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO,
+                        new BigDecimal("2000.00"),
+                        ShippingMethod.STANDARD,
+                        null,
+                        null
+                ));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order order = invocation.getArgument(0);
             order.setId(99L);
@@ -110,27 +127,6 @@ class OrderServiceTest {
     }
 
     @Test
-    void payMyOrder_ShouldSetPaidStatusAndPaymentMethod() {
-        Order order = new Order();
-        order.setId(10L);
-        order.setUsername("alice");
-        order.setStatus(OrderStatus.CREATED);
-        order.setTotalAmount(new BigDecimal("100.00"));
-        order.setItems(List.of());
-
-        PayOrderRequest request = new PayOrderRequest();
-        request.setPaymentMethod(PaymentMethod.CARD);
-
-        when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
-        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        var response = orderService.payMyOrder("alice", 10L, request);
-
-        assertEquals(OrderStatus.PAID, response.getStatus());
-        assertEquals(PaymentMethod.CARD, response.getPaymentMethod());
-    }
-
-    @Test
     void cancelOrderForAdmin_ShouldSetCancelledAndRestoreStock() {
         Product product = new Product();
         product.setId(6L);
@@ -151,6 +147,75 @@ class OrderServiceTest {
 
         assertEquals(OrderStatus.CANCELLED, response.getStatus());
         verify(inventoryService).increaseStockWithOptimisticLock(6L, 2);
+    }
+
+    @Test
+    void cancelMyOrder_ShouldSetCancelledAndRestoreStock() {
+        Product product = new Product();
+        product.setId(6L);
+
+        OrderItem item = new OrderItem();
+        item.setProduct(product);
+        item.setQuantity(2);
+
+        Order order = new Order();
+        order.setId(22L);
+        order.setUsername("alice");
+        order.setStatus(OrderStatus.CREATED);
+        order.setItems(List.of(item));
+
+        when(orderRepository.findById(22L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = orderService.cancelMyOrder("alice", 22L);
+
+        assertEquals(OrderStatus.CANCELLED, response.getStatus());
+        verify(inventoryService).increaseStockWithOptimisticLock(6L, 2);
+    }
+
+    @Test
+    void cancelMyOrder_ShouldStoreCancelReason() {
+        Order order = new Order();
+        order.setId(25L);
+        order.setUsername("alice");
+        order.setStatus(OrderStatus.CREATED);
+        order.setItems(List.of());
+
+        when(orderRepository.findById(25L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = orderService.cancelMyOrder("alice", 25L, "Yanlis urun secimi");
+
+        assertEquals(OrderStatus.CANCELLED, response.getStatus());
+        assertEquals("Yanlis urun secimi", response.getCancelReason());
+    }
+
+    @Test
+    void cancelMyOrder_ShouldThrowWhenOrderStatusIsNotCreated() {
+        Order order = new Order();
+        order.setId(23L);
+        order.setUsername("alice");
+        order.setStatus(OrderStatus.PAID);
+        order.setItems(List.of());
+
+        when(orderRepository.findById(23L)).thenReturn(Optional.of(order));
+
+        assertThrows(IllegalArgumentException.class, () -> orderService.cancelMyOrder("alice", 23L));
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void cancelMyOrder_ShouldThrowWhenOrderBelongsToDifferentUser() {
+        Order order = new Order();
+        order.setId(24L);
+        order.setUsername("other");
+        order.setStatus(OrderStatus.CREATED);
+        order.setItems(List.of());
+
+        when(orderRepository.findById(24L)).thenReturn(Optional.of(order));
+
+        assertThrows(OrderAccessDeniedException.class, () -> orderService.cancelMyOrder("alice", 24L));
+        verify(orderRepository, never()).save(any(Order.class));
     }
 
     @Test

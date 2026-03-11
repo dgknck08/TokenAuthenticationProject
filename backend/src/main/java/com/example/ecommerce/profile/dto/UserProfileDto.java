@@ -1,12 +1,12 @@
 package com.example.ecommerce.profile.dto;
-
-
+import java.util.List;
 
 public class UserProfileDto {
 	 private Long id;
 	    private String username;
 	    private String email;
 	    private String role;
+        private List<String> roles;
 	    private String firstName;
 	    private String lastName;
 
@@ -57,6 +57,14 @@ public class UserProfileDto {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public List<String> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(List<String> roles) {
+        this.roles = roles;
     }
 }
 

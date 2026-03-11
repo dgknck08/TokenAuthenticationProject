@@ -181,13 +181,21 @@ public class CartServiceImpl implements CartService {
 
     // Helper methods
     private Cart getOrCreateUserCart(Long userId) {
-        return cartRepository.findByUserId(userId).orElseGet(() -> {
-            var user = userRepository.findById(userId)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-            Cart newCart = new Cart();
-            newCart.setUser(user);
-            return cartRepository.save(newCart);
-        });
+        Optional<Cart> cartWithItems = cartRepository.findByUserIdWithItems(userId);
+        if (cartWithItems != null && cartWithItems.isPresent()) {
+            return cartWithItems.get();
+        }
+
+        Optional<Cart> cart = cartRepository.findByUserId(userId);
+        if (cart != null && cart.isPresent()) {
+            return cart.get();
+        }
+
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        Cart newCart = new Cart();
+        newCart.setUser(user);
+        return cartRepository.save(newCart);
     }
 
     private CartDto convertToCartDto(Cart cart) {

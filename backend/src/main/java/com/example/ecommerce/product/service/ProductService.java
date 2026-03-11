@@ -8,9 +8,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -25,6 +29,7 @@ import com.example.ecommerce.product.repository.ProductRepository;
 
 @Service
 public class ProductService {
+    private static final Logger logger = LoggerFactory.getLogger(ProductService.class);
 
     private final ProductRepository productRepository;
     private final InventoryService inventoryService;
@@ -49,27 +54,18 @@ public class ProductService {
 
     @Cacheable(value = "productSearch", key = "T(String).format('%s|%s|%s|%s|%s|%s', #category, #brand, #query, #pageable.pageNumber, #pageable.pageSize, #pageable.sort)")
     public Page<ProductDto> searchProducts(String category, String brand, String query, Pageable pageable) {
-        Specification<Product> spec = Specification.where(null);
+        String normalizedCategory = normalizeFilter(category);
+        String normalizedBrand = normalizeFilter(brand);
+        String normalizedQuery = normalizeFilter(query);
 
-        if (hasText(category)) {
-            String normalizedCategory = category.trim().toLowerCase();
-            spec = spec.and((root, cq, cb) -> cb.equal(cb.lower(root.get("category")), normalizedCategory));
+        try {
+            Pageable advancedSearchPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+            return productRepository.searchProductsAdvanced(normalizedCategory, normalizedBrand, normalizedQuery, advancedSearchPageable)
+                    .map(ProductMapper::toDto);
+        } catch (DataAccessException ex) {
+            logger.warn("Advanced product search unavailable, using fallback specification search. reason={}", ex.getMessage());
+            return searchProductsFallback(normalizedCategory, normalizedBrand, normalizedQuery, pageable);
         }
-
-        if (hasText(brand)) {
-            String normalizedBrand = brand.trim().toLowerCase();
-            spec = spec.and((root, cq, cb) -> cb.equal(cb.lower(root.get("brand")), normalizedBrand));
-        }
-
-        if (hasText(query)) {
-            String pattern = "%" + query.trim().toLowerCase() + "%";
-            spec = spec.and((root, cq, cb) -> cb.or(
-                    cb.like(cb.lower(root.get("name")), pattern),
-                    cb.like(cb.lower(root.get("description")), pattern)
-            ));
-        }
-
-        return productRepository.findAll(spec, pageable).map(ProductMapper::toDto);
     }
 
     @CacheEvict(value = "productSearch", allEntries = true)
@@ -190,5 +186,36 @@ public class ProductService {
 
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
+    }
+
+    private String normalizeFilter(String value) {
+        if (!hasText(value)) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    private Page<ProductDto> searchProductsFallback(String category, String brand, String query, Pageable pageable) {
+        Specification<Product> spec = Specification.where(null);
+
+        if (hasText(category)) {
+            String normalizedCategory = category.trim().toLowerCase();
+            spec = spec.and((root, cq, cb) -> cb.equal(cb.lower(root.get("category")), normalizedCategory));
+        }
+
+        if (hasText(brand)) {
+            String normalizedBrand = brand.trim().toLowerCase();
+            spec = spec.and((root, cq, cb) -> cb.equal(cb.lower(root.get("brand")), normalizedBrand));
+        }
+
+        if (hasText(query)) {
+            String pattern = "%" + query.trim().toLowerCase() + "%";
+            spec = spec.and((root, cq, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("name")), pattern),
+                    cb.like(cb.lower(root.get("description")), pattern)
+            ));
+        }
+
+        return productRepository.findAll(spec, pageable).map(ProductMapper::toDto);
     }
 }

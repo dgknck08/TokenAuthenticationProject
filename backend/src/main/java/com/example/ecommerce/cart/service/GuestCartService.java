@@ -4,16 +4,18 @@ import com.example.ecommerce.cart.model.GuestCart;
 import com.example.ecommerce.cart.model.GuestCartItem;
 import com.example.ecommerce.cart.dto.CartDto;
 import com.example.ecommerce.cart.dto.CartItemDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.ecommerce.inventory.service.InventoryService;
 import com.example.ecommerce.product.model.Product;
 import com.example.ecommerce.product.repository.ProductRepository;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.SerializationException;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,6 +27,7 @@ public class GuestCartService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final ProductRepository productRepository;
     private final InventoryService inventoryService;
+    private final ObjectMapper objectMapper;
     private static final String GUEST_CART_KEY_PREFIX = "guest_cart:";
     private static final Duration CART_EXPIRATION = Duration.ofDays(7); // 7 gün
     
@@ -82,17 +85,63 @@ public class GuestCartService {
     
     private GuestCart getOrCreateGuestCart(String sessionId) {
         String key = GUEST_CART_KEY_PREFIX + sessionId;
-        GuestCart guestCart = (GuestCart) redisTemplate.opsForValue().get(key);
+        Object cachedValue = null;
+        try {
+            cachedValue = redisTemplate.opsForValue().get(key);
+        } catch (SerializationException ex) {
+            // Legacy payload without type metadata can fail deserialization.
+            log.warn("Invalid guest cart payload for session {}, resetting cart.", sessionId, ex);
+            redisTemplate.delete(key);
+        }
+        GuestCart guestCart = null;
+        boolean convertedFromLegacyPayload = false;
+
+        if (cachedValue instanceof GuestCart cachedCart) {
+            guestCart = cachedCart;
+        } else if (cachedValue != null) {
+            guestCart = convertLegacyGuestCart(cachedValue, sessionId);
+            convertedFromLegacyPayload = guestCart != null;
+        }
         
         if (guestCart == null) {
             guestCart = new GuestCart();
             guestCart.setSessionId(sessionId);
-            guestCart.setCreatedAt(LocalDateTime.now());
-            guestCart.setUpdatedAt(LocalDateTime.now());
+            long now = System.currentTimeMillis();
+            guestCart.setCreatedAt(now);
+            guestCart.setUpdatedAt(now);
+            saveGuestCart(sessionId, guestCart);
+            return guestCart;
+        }
+
+        if (convertedFromLegacyPayload) {
+            // Rewrite with current serializer format to avoid repeated conversions.
             saveGuestCart(sessionId, guestCart);
         }
         
         return guestCart;
+    }
+
+    private GuestCart convertLegacyGuestCart(Object cachedValue, String sessionId) {
+        try {
+            GuestCart converted = objectMapper.convertValue(cachedValue, GuestCart.class);
+            if (converted.getItems() == null) {
+                converted.setItems(new HashMap<>());
+            }
+            if (converted.getSessionId() == null || converted.getSessionId().isBlank()) {
+                converted.setSessionId(sessionId);
+            }
+            long now = System.currentTimeMillis();
+            if (converted.getCreatedAt() == null) {
+                converted.setCreatedAt(now);
+            }
+            converted.setUpdatedAt(now);
+            log.warn("Recovered legacy guest cart payload for session {}", sessionId);
+            return converted;
+        } catch (IllegalArgumentException ex) {
+            log.warn("Failed to deserialize guest cart for session {}, resetting cart. payloadType={}",
+                    sessionId, cachedValue.getClass().getName(), ex);
+            return null;
+        }
     }
     
     private void saveGuestCart(String sessionId, GuestCart guestCart) {

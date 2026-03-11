@@ -93,7 +93,7 @@ public class AccountLockoutService {
                         sanitizeForLog(username), sanitizeForLog(ipAddress));
             }
 
-            auditService.logAuthEventAsync(
+            auditService.logAuthEvent(
                 null,
                 username,
                 successful ? AuditLog.AuditAction.USER_LOGIN_SUCCESS : AuditLog.AuditAction.USER_LOGIN_FAILURE,
@@ -169,7 +169,7 @@ public class AccountLockoutService {
         logger.warn("Account locked for user: {} due to {} failed attempts",
                 sanitizeForLog(username), attemptCount);
 
-        auditService.logAuthEventAsync(
+        auditService.logAuthEvent(
             null,
             username,
             AuditLog.AuditAction.USER_ACCOUNT_LOCKED,
@@ -203,7 +203,7 @@ public class AccountLockoutService {
 
         logger.info("Account manually unlocked by administrator");
 
-        auditService.logAuthEventAsync(
+        auditService.logAuthEvent(
             null,
             username,
             AuditLog.AuditAction.USER_ACCOUNT_UNLOCKED,
@@ -253,7 +253,7 @@ public class AccountLockoutService {
             logger.warn("Suspicious login detected for user: {} - {}",
                     sanitizeForLog(username), sanitizeForLog(reason.trim()));
 
-            auditService.logAuthEventAsync(
+            auditService.logAuthEvent(
                 null,
                 username,
                 AuditLog.AuditAction.SUSPICIOUS_ACTIVITY,
