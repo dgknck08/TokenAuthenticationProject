@@ -3,8 +3,6 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
-
-### STS ###
 .apt_generated
 .classpath
 .factorypath
@@ -12,14 +10,10 @@ target/
 .settings
 .springBeans
 .sts4-cache
-
-### IntelliJ IDEA ###
 .idea
 *.iws
 *.iml
 *.ipr
-
-### NetBeans ###
 /nbproject/private/
 /nbbuild/
 /dist/
@@ -28,8 +22,6 @@ target/
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
-
-### VS Code ###
 .vscode/
 config.properties
 application.yml
@@ -40,31 +32,16 @@ application.properties
 application-test.properties
 target/
 bin/
-
-# IDE dosyaları
 .idea/
 *.iml
 .vscode/
-
-# Log dosyaları
 *.log
 *.log.*
 logs/
-
-# OS sistem dosyaları
 .DS_Store
 Thumbs.db
-
-# Internal docs kept local only
-cdx/readmes/
-docs/readmes/
-
-# Local tooling/cache folders
 .m2home/
 AppData/
-
-# Keep all Codex scratch artifacts out of git
-cdx/
 
 *.pem
 *.key
