@@ -49,7 +49,7 @@ public class IdempotencyService {
             return Optional.empty();
         }
 
-        IdempotencyKeyRecord existing = existingOptional.get();
+        IdempotencyKeyRecord existing = existingOptional.orElseThrow();
         if (existing.getExpiresAt().isBefore(Instant.now())) {
             return Optional.empty();
         }

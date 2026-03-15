@@ -120,7 +120,8 @@ public class PasswordResetServiceImpl implements PasswordResetService {
             return;
         }
 
-        if (mailSender.isEmpty()) {
+        JavaMailSender configuredMailSender = mailSender.orElse(null);
+        if (configuredMailSender == null) {
             logger.warn("JavaMailSender is not configured. Password reset email was not sent for {}.", sanitizeForLog(to));
             return;
         }
@@ -131,7 +132,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
             message.setTo(to);
             message.setSubject("Reset your password");
             message.setText(buildEmailBody(fullName, resetUrl));
-            mailSender.get().send(message);
+            configuredMailSender.send(message);
             logger.info("Password reset email sent to {}", sanitizeForLog(to));
         } catch (Exception e) {
             logger.error("Failed to send password reset email to {}", sanitizeForLog(to), e);

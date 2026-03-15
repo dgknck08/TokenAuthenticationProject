@@ -14,6 +14,12 @@ frontend/.angular/
 frontend/dist/
 backend/target/
 backend/bin/
+.m2/
+**/.m2/
+backend/.mvn-settings.xml
+**/.sonar/
+**/.scannerwork/
+**/.mvn/wrapper/dists/
 *.log
 *.log.*
 logs/

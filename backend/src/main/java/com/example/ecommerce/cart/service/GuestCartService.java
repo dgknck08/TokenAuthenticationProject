@@ -7,6 +7,7 @@ import com.example.ecommerce.cart.dto.CartItemDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.ecommerce.inventory.service.InventoryService;
 import com.example.ecommerce.product.model.Product;
+import com.example.ecommerce.product.exception.ProductNotFoundException;
 import com.example.ecommerce.product.repository.ProductRepository;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.SerializationException;
@@ -38,7 +39,7 @@ public class GuestCartService {
     
     public CartDto addItemToGuestCart(String sessionId, Long productId, int quantity) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
         inventoryService.ensureAvailableStock(productId, quantity);
         
         GuestCart guestCart = getOrCreateGuestCart(sessionId);

@@ -59,7 +59,7 @@ public class JwtBlacklistService {
             }
         } catch (Exception e) {
             logger.error("Error blacklisting token: {}", e.getMessage());
-            throw new RuntimeException("Failed to blacklist token", e);
+            throw new IllegalStateException("Failed to blacklist token", e);
         }
     }
 
@@ -125,7 +125,7 @@ public class JwtBlacklistService {
             
         } catch (Exception e) {
             logger.error("Error blacklisting user tokens: {}", e.getMessage());
-            throw new RuntimeException("Failed to blacklist user tokens", e);
+            throw new IllegalStateException("Failed to blacklist user tokens", e);
         }
     }
 

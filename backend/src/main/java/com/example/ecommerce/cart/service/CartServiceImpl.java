@@ -1,6 +1,7 @@
 package com.example.ecommerce.cart.service;
 
 import com.example.ecommerce.auth.repository.UserRepository;
+import com.example.ecommerce.auth.exception.UserNotFoundException;
 import com.example.ecommerce.cart.model.Cart;
 import com.example.ecommerce.cart.model.CartItem;
 import com.example.ecommerce.cart.model.GuestCart;
@@ -10,6 +11,7 @@ import com.example.ecommerce.cart.dto.CartDto;
 import com.example.ecommerce.cart.dto.CartItemDto;
 import com.example.ecommerce.inventory.service.InventoryService;
 import com.example.ecommerce.product.model.Product;
+import com.example.ecommerce.product.exception.ProductNotFoundException;
 import com.example.ecommerce.product.repository.ProductRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,7 +45,7 @@ public class CartServiceImpl implements CartService {
     public CartDto addItemToCart(Long userId, Long productId, int quantity) {
         Cart cart = getOrCreateUserCart(userId);
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
 
         // Check if item already exists in cart
         Optional<CartItem> existingItem = cart.getItems().stream()
@@ -52,7 +54,7 @@ public class CartServiceImpl implements CartService {
 
         if (existingItem.isPresent()) {
             // Update quantity
-            CartItem item = existingItem.get();
+            CartItem item = existingItem.orElseThrow();
             inventoryService.ensureAvailableStock(productId, item.getQuantity() + quantity);
             item.setQuantity(item.getQuantity() + quantity);
         } else {
@@ -156,7 +158,7 @@ public class CartServiceImpl implements CartService {
 
             if (existingItem.isPresent()) {
                 // Add quantities together
-                CartItem item = existingItem.get();
+                CartItem item = existingItem.orElseThrow();
                 inventoryService.ensureAvailableStock(guestItem.getProductId(), item.getQuantity() + guestItem.getQuantity());
                 item.setQuantity(item.getQuantity() + guestItem.getQuantity());
             } else {
@@ -182,17 +184,17 @@ public class CartServiceImpl implements CartService {
     // Helper methods
     private Cart getOrCreateUserCart(Long userId) {
         Optional<Cart> cartWithItems = cartRepository.findByUserIdWithItems(userId);
-        if (cartWithItems != null && cartWithItems.isPresent()) {
-            return cartWithItems.get();
+        if (cartWithItems.isPresent()) {
+            return cartWithItems.orElseThrow();
         }
 
         Optional<Cart> cart = cartRepository.findByUserId(userId);
-        if (cart != null && cart.isPresent()) {
-            return cart.get();
+        if (cart.isPresent()) {
+            return cart.orElseThrow();
         }
 
         var user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
         Cart newCart = new Cart();
         newCart.setUser(user);
         return cartRepository.save(newCart);

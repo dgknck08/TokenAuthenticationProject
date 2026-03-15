@@ -3,6 +3,7 @@ package com.example.ecommerce.inventory.service;
 import com.example.ecommerce.cart.exception.InsufficientStockException;
 import com.example.ecommerce.inventory.model.InventoryItem;
 import com.example.ecommerce.inventory.repository.InventoryRepository;
+import com.example.ecommerce.product.exception.ProductNotFoundException;
 import com.example.ecommerce.product.model.Product;
 import com.example.ecommerce.product.repository.ProductRepository;
 import org.springframework.stereotype.Service;
@@ -23,7 +24,7 @@ public class InventoryService {
 
     public void initializeStock(Long productId, int initialStock) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found with id " + productId));
+                .orElseThrow(() -> new ProductNotFoundException("Product not found with id " + productId));
 
         InventoryItem item = inventoryRepository.findByProductId(productId)
                 .orElseGet(InventoryItem::new);
@@ -44,7 +45,7 @@ public class InventoryService {
 
     public void setStock(Long productId, int newStock) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found with id " + productId));
+                .orElseThrow(() -> new ProductNotFoundException("Product not found with id " + productId));
         product.setStock(Math.max(newStock, 0));
 
         InventoryItem item = inventoryRepository.findByProductId(productId)
@@ -68,7 +69,7 @@ public class InventoryService {
 
     private void adjustStock(Long productId, int delta) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found with id " + productId));
+                .orElseThrow(() -> new ProductNotFoundException("Product not found with id " + productId));
 
         InventoryItem item = inventoryRepository.findByProductId(productId)
                 .orElseGet(() -> createInventoryItem(product));

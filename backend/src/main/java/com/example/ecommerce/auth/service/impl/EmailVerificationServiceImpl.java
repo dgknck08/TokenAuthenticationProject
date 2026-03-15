@@ -121,7 +121,8 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
             return;
         }
 
-        if (mailSender.isEmpty()) {
+        JavaMailSender configuredMailSender = mailSender.orElse(null);
+        if (configuredMailSender == null) {
             logger.warn("JavaMailSender is not configured. Verification email was not sent for {}.", sanitizeForLog(to));
             return;
         }
@@ -132,7 +133,7 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
             message.setTo(to);
             message.setSubject("Verify your email");
             message.setText(buildEmailBody(fullName, verificationUrl));
-            mailSender.get().send(message);
+            configuredMailSender.send(message);
             logger.info("Verification email sent to {}", sanitizeForLog(to));
         } catch (Exception e) {
             logger.error("Failed to send verification email to {}", sanitizeForLog(to), e);

@@ -106,7 +106,7 @@ this.userDetailsCache = userDetailsCache;
             try {
                 return userDetailsService.loadUserByUsername(key);
             } catch (Exception e) {
-                throw new RuntimeException("Failed to load user details for: " + key, e);
+                throw new IllegalStateException("Failed to load user details for: " + key, e);
             }
         });
 

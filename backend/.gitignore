@@ -1,5 +1,11 @@
 HELP.md
 target/
+.m2/
+/.m2/
+/.sonar/
+/.scannerwork/
+.mvn-settings.xml
+.mvn/wrapper/dists/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
