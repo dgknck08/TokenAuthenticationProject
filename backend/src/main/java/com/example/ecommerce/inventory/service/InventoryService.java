@@ -6,6 +6,7 @@ import com.example.ecommerce.inventory.repository.InventoryRepository;
 import com.example.ecommerce.product.exception.ProductNotFoundException;
 import com.example.ecommerce.product.model.Product;
 import com.example.ecommerce.product.repository.ProductRepository;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,10 +18,14 @@ public class InventoryService {
     private static final String PRODUCT_NOT_FOUND_WITH_ID = "Product not found with id ";
     private final InventoryRepository inventoryRepository;
     private final ProductRepository productRepository;
+    private final InventoryService selfProxy;
 
-    public InventoryService(InventoryRepository inventoryRepository, ProductRepository productRepository) {
+    public InventoryService(InventoryRepository inventoryRepository,
+                            ProductRepository productRepository,
+                            @Lazy InventoryService selfProxy) {
         this.inventoryRepository = inventoryRepository;
         this.productRepository = productRepository;
+        this.selfProxy = selfProxy;
     }
 
     public void initializeStock(Long productId, int initialStock) {
@@ -104,7 +109,7 @@ public class InventoryService {
 
     @Transactional(readOnly = true)
     public void ensureAvailableStock(Long productId, int requestedQuantity) {
-        int available = getAvailableStock(productId);
+        int available = selfProxy.getAvailableStock(productId);
         if (requestedQuantity > available) {
             throw new InsufficientStockException(
                     "Insufficient stock for product " + productId + ". Available: " + available + ", Requested: " + requestedQuantity

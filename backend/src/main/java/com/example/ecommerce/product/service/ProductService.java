@@ -30,6 +30,7 @@ import com.example.ecommerce.product.repository.ProductRepository;
 @Service
 public class ProductService {
     private static final Logger logger = LoggerFactory.getLogger(ProductService.class);
+    private static final String PRODUCT_NOT_FOUND_WITH_ID = "Product not found with id ";
 
     private final ProductRepository productRepository;
     private final InventoryService inventoryService;
@@ -48,7 +49,7 @@ public class ProductService {
 
     public ProductDto getProductById(Long id) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found with id " + id));
+                .orElseThrow(() -> new ProductNotFoundException(PRODUCT_NOT_FOUND_WITH_ID + id));
         return ProductMapper.toDto(product);
     }
 
@@ -86,7 +87,7 @@ public class ProductService {
     @CacheEvict(value = "productSearch", allEntries = true)
     public ProductDto updateProduct(Long id, ProductDto productDto) {
         Product existing = productRepository.findById(id)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found with id " + id));
+                .orElseThrow(() -> new ProductNotFoundException(PRODUCT_NOT_FOUND_WITH_ID + id));
 
         existing.setName(productDto.getName());
         existing.setDescription(productDto.getDescription());
@@ -114,7 +115,7 @@ public class ProductService {
     @CacheEvict(value = "productSearch", allEntries = true)
     public void deleteProduct(Long id) {
         Product product = productRepository.findById(id)
-            .orElseThrow(() -> new ProductNotFoundException("Product not found with id " + id));
+            .orElseThrow(() -> new ProductNotFoundException(PRODUCT_NOT_FOUND_WITH_ID + id));
         productRepository.delete(product);
         Map<String, Object> details = new HashMap<>();
         details.put("productId", id);

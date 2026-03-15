@@ -38,6 +38,7 @@ import java.util.concurrent.TimeUnit;
 public class IyzicoPaymentService {
     private static final Logger logger = LoggerFactory.getLogger(IyzicoPaymentService.class);
     private static final String METRIC_OUTCOME_FAILED = "failed";
+    private static final String METRIC_OUTCOME_SUCCESS = "success";
     private static final String DETAIL_ORDER_ID = "orderId";
 
     private final IyzicoProperties properties;
@@ -103,7 +104,7 @@ public class IyzicoPaymentService {
             order.setPaymentProviderStatus(PaymentProviderStatus.PENDING);
             order.setPaymentErrorMessage(null);
             order.setPaymentFailedAt(null);
-            recordMetric("init", "success", startNanos);
+            recordMetric("init", METRIC_OUTCOME_SUCCESS, startNanos);
             auditService.logSystemEvent(
                     order.getUserId(),
                     username,
@@ -187,7 +188,7 @@ public class IyzicoPaymentService {
                         .message("Payment confirmation ignored for cancelled order.")
                         .build();
             }
-            recordMetric("callback", "success", startNanos);
+            recordMetric("callback", METRIC_OUTCOME_SUCCESS, startNanos);
             return IyzicoPaymentCallbackResponse.builder()
                     .orderId(order.getId())
                     .conversationId(order.getPaymentConversationId())
@@ -247,7 +248,7 @@ public class IyzicoPaymentService {
 
         if (isSuccessfulWebhook(eventType, paymentStatus)) {
             boolean applied = applySuccessfulPayment(order, conversationId, paymentId, order.getPaymentToken());
-            recordMetric("webhook", applied ? "success" : "ignored", startNanos);
+            recordMetric("webhook", applied ? METRIC_OUTCOME_SUCCESS : "ignored", startNanos);
             return;
         }
 
