@@ -14,6 +14,7 @@ import java.time.Instant;
 @Service
 @Transactional
 public class InventoryService {
+    private static final String PRODUCT_NOT_FOUND_WITH_ID = "Product not found with id ";
     private final InventoryRepository inventoryRepository;
     private final ProductRepository productRepository;
 
@@ -24,7 +25,7 @@ public class InventoryService {
 
     public void initializeStock(Long productId, int initialStock) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found with id " + productId));
+                .orElseThrow(() -> new ProductNotFoundException(PRODUCT_NOT_FOUND_WITH_ID + productId));
 
         InventoryItem item = inventoryRepository.findByProductId(productId)
                 .orElseGet(InventoryItem::new);
@@ -45,7 +46,7 @@ public class InventoryService {
 
     public void setStock(Long productId, int newStock) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found with id " + productId));
+                .orElseThrow(() -> new ProductNotFoundException(PRODUCT_NOT_FOUND_WITH_ID + productId));
         product.setStock(Math.max(newStock, 0));
 
         InventoryItem item = inventoryRepository.findByProductId(productId)
@@ -69,7 +70,7 @@ public class InventoryService {
 
     private void adjustStock(Long productId, int delta) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found with id " + productId));
+                .orElseThrow(() -> new ProductNotFoundException(PRODUCT_NOT_FOUND_WITH_ID + productId));
 
         InventoryItem item = inventoryRepository.findByProductId(productId)
                 .orElseGet(() -> createInventoryItem(product));

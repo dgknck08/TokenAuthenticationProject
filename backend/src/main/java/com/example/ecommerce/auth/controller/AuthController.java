@@ -31,6 +31,7 @@ import org.springframework.web.bind.annotation.*;
 @Validated
 public class AuthController {
     private static final String KEY_VALID = "valid";
+    private static final String KEY_MESSAGE = "message";
 
 	private final AuthService authService;
     private final JwtTokenProvider jwtTokenProvider;
@@ -102,25 +103,25 @@ public class AuthController {
             @Valid @RequestBody(required = false) VerifyEmailRequest body) {
         String resolvedToken = resolveVerificationToken(token, body);
         authService.verifyEmail(resolvedToken);
-        return ResponseEntity.ok(Map.of("message", "Email verified successfully"));
+        return ResponseEntity.ok(Map.of(KEY_MESSAGE, "Email verified successfully"));
     }
 
     @PostMapping("/resend-verification")
     public ResponseEntity<Map<String, String>> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
         authService.resendVerificationEmail(request.email());
-        return ResponseEntity.ok(Map.of("message", "If the account exists, a new verification email has been sent"));
+        return ResponseEntity.ok(Map.of(KEY_MESSAGE, "If the account exists, a new verification email has been sent"));
     }
 
     @PostMapping("/forgot-password")
     public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         authService.requestPasswordReset(request.email());
-        return ResponseEntity.ok(Map.of("message", "If the account exists, password reset instructions have been sent"));
+        return ResponseEntity.ok(Map.of(KEY_MESSAGE, "If the account exists, password reset instructions have been sent"));
     }
 
     @PostMapping("/reset-password")
     public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.confirmPasswordReset(request.token(), request.newPassword());
-        return ResponseEntity.ok(Map.of("message", "Password reset successful"));
+        return ResponseEntity.ok(Map.of(KEY_MESSAGE, "Password reset successful"));
     }
 
     @PostMapping("/refresh-token")
@@ -208,7 +209,7 @@ public class AuthController {
     @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ResponseEntity<Map<String, String>> unlockAccount(@PathVariable String username) {
         accountLockoutService.unlockAccount(username);
-        return ResponseEntity.ok(Map.of("message", "Account unlocked successfully"));
+        return ResponseEntity.ok(Map.of(KEY_MESSAGE, "Account unlocked successfully"));
     }
 
     private String getTokenFromRequest(HttpServletRequest request) {

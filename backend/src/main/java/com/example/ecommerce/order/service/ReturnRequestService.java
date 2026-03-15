@@ -30,6 +30,10 @@ import java.util.concurrent.TimeUnit;
 @Transactional
 public class ReturnRequestService {
     private static final Logger logger = LoggerFactory.getLogger(ReturnRequestService.class);
+    private static final String METRIC_ACTION_CREATE = "create";
+    private static final String METRIC_ACTION_REJECT = "reject";
+    private static final String METRIC_OUTCOME_FAILED = "failed";
+    private static final String METRIC_OUTCOME_SUCCESS = "success";
 
     private final ReturnRequestRepository returnRequestRepository;
     private final OrderRepository orderRepository;
@@ -51,21 +55,21 @@ public class ReturnRequestService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Order not found: " + orderId));
         if (!order.getUsername().equals(username)) {
-            recordMetric("create", "failed", startNanos);
+            recordMetric(METRIC_ACTION_CREATE, METRIC_OUTCOME_FAILED, startNanos);
             throw new OrderAccessDeniedException("Order does not belong to current user.");
         }
         if (order.getStatus() != OrderStatus.DELIVERED) {
-            recordMetric("create", "failed", startNanos);
+            recordMetric(METRIC_ACTION_CREATE, METRIC_OUTCOME_FAILED, startNanos);
             throw new IllegalArgumentException("Return request can only be created for delivered orders.");
         }
         if (returnRequestRepository.findByOrder_Id(orderId).isPresent()) {
-            recordMetric("create", "failed", startNanos);
+            recordMetric(METRIC_ACTION_CREATE, METRIC_OUTCOME_FAILED, startNanos);
             throw new IllegalArgumentException("Return request already exists for this order.");
         }
 
         String sanitizedReason = trimOrNull(reason);
         if (sanitizedReason == null) {
-            recordMetric("create", "failed", startNanos);
+            recordMetric(METRIC_ACTION_CREATE, METRIC_OUTCOME_FAILED, startNanos);
             throw new IllegalArgumentException("Return reason is required.");
         }
 
@@ -77,7 +81,7 @@ public class ReturnRequestService {
         entity.setReason(sanitizedReason);
         ReturnRequest saved = returnRequestRepository.save(entity);
 
-        recordMetric("create", "success", startNanos);
+        recordMetric(METRIC_ACTION_CREATE, METRIC_OUTCOME_SUCCESS, startNanos);
         logAudit(saved, username, AuditLog.AuditAction.ORDER_RETURN_REQUESTED);
         logger.info("event=return_request_created returnRequestId={} orderId={} username={}", saved.getId(), orderId, username);
         return toResponse(saved);
@@ -100,14 +104,14 @@ public class ReturnRequestService {
         ReturnRequest request = returnRequestRepository.findById(returnRequestId)
                 .orElseThrow(() -> new ReturnRequestNotFoundException("Return request not found: " + returnRequestId));
         if (request.getStatus() != ReturnRequestStatus.REQUESTED) {
-            recordMetric("approve", "failed", startNanos);
+            recordMetric("approve", METRIC_OUTCOME_FAILED, startNanos);
             throw new IllegalArgumentException("Only requested return requests can be approved.");
         }
         request.setStatus(ReturnRequestStatus.APPROVED);
         request.setReviewedBy(trimOrNull(adminUsername));
         request.setReviewedAt(Instant.now());
         ReturnRequest saved = returnRequestRepository.save(request);
-        recordMetric("approve", "success", startNanos);
+        recordMetric("approve", METRIC_OUTCOME_SUCCESS, startNanos);
         logAudit(saved, adminUsername, AuditLog.AuditAction.ORDER_RETURN_APPROVED);
         logger.info("event=return_request_approved returnRequestId={} orderId={} admin={}",
                 saved.getId(), saved.getOrder().getId(), adminUsername);
@@ -119,12 +123,12 @@ public class ReturnRequestService {
         ReturnRequest request = returnRequestRepository.findById(returnRequestId)
                 .orElseThrow(() -> new ReturnRequestNotFoundException("Return request not found: " + returnRequestId));
         if (request.getStatus() != ReturnRequestStatus.REQUESTED) {
-            recordMetric("reject", "failed", startNanos);
+            recordMetric(METRIC_ACTION_REJECT, METRIC_OUTCOME_FAILED, startNanos);
             throw new IllegalArgumentException("Only requested return requests can be rejected.");
         }
         String sanitizedNote = trimOrNull(adminNote);
         if (sanitizedNote == null) {
-            recordMetric("reject", "failed", startNanos);
+            recordMetric(METRIC_ACTION_REJECT, METRIC_OUTCOME_FAILED, startNanos);
             throw new IllegalArgumentException("Rejection note is required.");
         }
         request.setStatus(ReturnRequestStatus.REJECTED);
@@ -132,7 +136,7 @@ public class ReturnRequestService {
         request.setReviewedBy(trimOrNull(adminUsername));
         request.setReviewedAt(Instant.now());
         ReturnRequest saved = returnRequestRepository.save(request);
-        recordMetric("reject", "success", startNanos);
+        recordMetric(METRIC_ACTION_REJECT, METRIC_OUTCOME_SUCCESS, startNanos);
         logAudit(saved, adminUsername, AuditLog.AuditAction.ORDER_RETURN_REJECTED);
         logger.info("event=return_request_rejected returnRequestId={} orderId={} admin={}",
                 saved.getId(), saved.getOrder().getId(), adminUsername);

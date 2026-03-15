@@ -37,6 +37,8 @@ import java.util.concurrent.TimeUnit;
 @Transactional
 public class IyzicoPaymentService {
     private static final Logger logger = LoggerFactory.getLogger(IyzicoPaymentService.class);
+    private static final String METRIC_OUTCOME_FAILED = "failed";
+    private static final String DETAIL_ORDER_ID = "orderId";
 
     private final IyzicoProperties properties;
     private final IyzicoGatewayClient gatewayClient;
@@ -71,11 +73,11 @@ public class IyzicoPaymentService {
 
         Order order = loadOwnedOrder(username, orderId);
         if (order.getStatus() != OrderStatus.CREATED) {
-            recordMetric("init", "failed", startNanos);
+            recordMetric("init", METRIC_OUTCOME_FAILED, startNanos);
             throw new IllegalArgumentException("Only CREATED orders can start card payment.");
         }
         if (order.getItems() == null || order.getItems().isEmpty()) {
-            recordMetric("init", "failed", startNanos);
+            recordMetric("init", METRIC_OUTCOME_FAILED, startNanos);
             throw new IllegalArgumentException("Order has no items to pay.");
         }
 
@@ -108,7 +110,7 @@ public class IyzicoPaymentService {
                     AuditLog.AuditAction.ORDER_PAYMENT_INITIATED,
                     "Iyzico payment initialized",
                     details(
-                            "orderId", order.getId(),
+                            DETAIL_ORDER_ID, order.getId(),
                             "conversationId", order.getPaymentConversationId(),
                             "provider", PaymentProvider.IYZICO.name()
                     )
@@ -117,14 +119,14 @@ public class IyzicoPaymentService {
             order.setPaymentProviderStatus(PaymentProviderStatus.FAILED);
             order.setPaymentFailedAt(Instant.now());
             order.setPaymentErrorMessage(firstNonBlank(providerResult.errorMessage(), "Iyzico init failed"));
-            recordMetric("init", "failed", startNanos);
+            recordMetric("init", METRIC_OUTCOME_FAILED, startNanos);
             auditService.logSystemEvent(
                     order.getUserId(),
                     username,
                     AuditLog.AuditAction.ORDER_PAYMENT_FAILED,
                     "Iyzico payment initialization failed",
                     details(
-                            "orderId", order.getId(),
+                            DETAIL_ORDER_ID, order.getId(),
                             "conversationId", order.getPaymentConversationId(),
                             "errorCode", providerResult.errorCode(),
                             "errorMessage", providerResult.errorMessage()
@@ -150,7 +152,7 @@ public class IyzicoPaymentService {
         long startNanos = System.nanoTime();
         ensureIyzicoConfigured();
         if (token == null || token.isBlank()) {
-            recordMetric("callback", "failed", startNanos);
+            recordMetric("callback", METRIC_OUTCOME_FAILED, startNanos);
             throw new IllegalArgumentException("Missing payment token.");
         }
 
@@ -163,7 +165,7 @@ public class IyzicoPaymentService {
                 AuditLog.AuditAction.ORDER_PAYMENT_CALLBACK_RECEIVED,
                 "Iyzico callback received",
                 details(
-                        "orderId", order.getId(),
+                        DETAIL_ORDER_ID, order.getId(),
                         "conversationId", firstNonBlank(retrieveResult.conversationId(), order.getPaymentConversationId()),
                         "status", retrieveResult.status(),
                         "paymentStatus", retrieveResult.paymentStatus()
@@ -199,7 +201,7 @@ public class IyzicoPaymentService {
 
         applyFailedPayment(order, firstNonBlank(retrieveResult.conversationId(), conversationIdHint), token,
                 firstNonBlank(retrieveResult.errorMessage(), "Iyzico payment failed"));
-        recordMetric("callback", "failed", startNanos);
+        recordMetric("callback", METRIC_OUTCOME_FAILED, startNanos);
         return IyzicoPaymentCallbackResponse.builder()
                 .orderId(order.getId())
                 .conversationId(order.getPaymentConversationId())
@@ -235,7 +237,7 @@ public class IyzicoPaymentService {
                 AuditLog.AuditAction.ORDER_PAYMENT_WEBHOOK_RECEIVED,
                 "Iyzico webhook received",
                 details(
-                        "orderId", order.getId(),
+                        DETAIL_ORDER_ID, order.getId(),
                         "conversationId", conversationId,
                         "eventType", eventType,
                         "paymentStatus", paymentStatus,
@@ -256,7 +258,7 @@ public class IyzicoPaymentService {
             }
             applyFailedPayment(order, conversationId, order.getPaymentToken(),
                     firstNonBlank(errorMessage, "Iyzico webhook reported payment failure"));
-            recordMetric("webhook", "failed", startNanos);
+            recordMetric("webhook", METRIC_OUTCOME_FAILED, startNanos);
             return;
         }
 
@@ -304,7 +306,7 @@ public class IyzicoPaymentService {
                 AuditLog.AuditAction.ORDER_PAID,
                 "Order paid by Iyzico",
                 details(
-                        "orderId", order.getId(),
+                        DETAIL_ORDER_ID, order.getId(),
                         "conversationId", order.getPaymentConversationId(),
                         "paymentReferenceId", order.getPaymentReferenceId()
                 )
@@ -327,7 +329,7 @@ public class IyzicoPaymentService {
                 AuditLog.AuditAction.ORDER_PAYMENT_FAILED,
                 "Order payment failed by Iyzico",
                 details(
-                        "orderId", order.getId(),
+                        DETAIL_ORDER_ID, order.getId(),
                         "conversationId", order.getPaymentConversationId(),
                         "errorMessage", order.getPaymentErrorMessage()
                 )

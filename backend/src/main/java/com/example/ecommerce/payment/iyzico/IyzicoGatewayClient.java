@@ -23,6 +23,9 @@ import java.util.List;
 
 @Component
 public class IyzicoGatewayClient {
+    private static final String DEFAULT_CITY = "Istanbul";
+    private static final String DEFAULT_COUNTRY = "Turkey";
+    private static final String DEFAULT_ZIP_CODE = "34000";
     private final IyzicoProperties properties;
 
     public IyzicoGatewayClient(IyzicoProperties properties) {
@@ -98,29 +101,29 @@ public class IyzicoGatewayClient {
         buyer.setIdentityNumber(properties.getDefaultIdentityNumber());
         buyer.setRegistrationAddress(defaultIfBlank(order.getShippingAddressLine(), "N/A"));
         buyer.setIp(defaultIfBlank(properties.getDefaultBuyerIp(), null));
-        buyer.setCity(defaultIfBlank(order.getShippingCity(), "Istanbul"));
-        buyer.setCountry(defaultIfBlank(order.getShippingCountry(), "Turkey"));
-        buyer.setZipCode(defaultIfBlank(order.getShippingPostalCode(), "34000"));
+        buyer.setCity(defaultIfBlank(order.getShippingCity(), DEFAULT_CITY));
+        buyer.setCountry(defaultIfBlank(order.getShippingCountry(), DEFAULT_COUNTRY));
+        buyer.setZipCode(defaultIfBlank(order.getShippingPostalCode(), DEFAULT_ZIP_CODE));
         return buyer;
     }
 
     private Address buildShippingAddress(Order order, User user) {
         Address address = new Address();
         address.setContactName(resolveContactName(order, user));
-        address.setCity(defaultIfBlank(order.getShippingCity(), "Istanbul"));
-        address.setCountry(defaultIfBlank(order.getShippingCountry(), "Turkey"));
+        address.setCity(defaultIfBlank(order.getShippingCity(), DEFAULT_CITY));
+        address.setCountry(defaultIfBlank(order.getShippingCountry(), DEFAULT_COUNTRY));
         address.setAddress(defaultIfBlank(order.getShippingAddressLine(), "N/A"));
-        address.setZipCode(defaultIfBlank(order.getShippingPostalCode(), "34000"));
+        address.setZipCode(defaultIfBlank(order.getShippingPostalCode(), DEFAULT_ZIP_CODE));
         return address;
     }
 
     private Address buildBillingAddress(Order order, User user) {
         Address address = new Address();
         address.setContactName(resolveContactName(order, user));
-        address.setCity(defaultIfBlank(order.getShippingCity(), "Istanbul"));
-        address.setCountry(defaultIfBlank(order.getShippingCountry(), "Turkey"));
+        address.setCity(defaultIfBlank(order.getShippingCity(), DEFAULT_CITY));
+        address.setCountry(defaultIfBlank(order.getShippingCountry(), DEFAULT_COUNTRY));
         address.setAddress(defaultIfBlank(order.getShippingAddressLine(), "N/A"));
-        address.setZipCode(defaultIfBlank(order.getShippingPostalCode(), "34000"));
+        address.setZipCode(defaultIfBlank(order.getShippingPostalCode(), DEFAULT_ZIP_CODE));
         return address;
     }
 

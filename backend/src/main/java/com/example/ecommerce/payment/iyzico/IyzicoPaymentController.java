@@ -35,6 +35,7 @@ import java.util.Map;
 @RequestMapping("/api/payments/iyzico")
 @Tag(name = "Iyzico Payments", description = "Iyzico card payment operations")
 public class IyzicoPaymentController {
+    private static final String PAYMENT_STATUS_FAILED = "failed";
     private final IyzicoPaymentService paymentService;
     private final IyzicoProperties properties;
     private final IdempotencyService idempotencyService;
@@ -87,7 +88,7 @@ public class IyzicoPaymentController {
 
     @RequestMapping(value = "/callback", method = {RequestMethod.POST, RequestMethod.GET})
     @Operation(summary = "Iyzico callback endpoint", description = "Public callback endpoint called by Iyzico after card payment.")
-    public ResponseEntity<?> handleCallback(
+    public ResponseEntity<Object> handleCallback(
             @RequestParam(value = "token", required = false) String token,
             @RequestParam(value = "conversationId", required = false) String conversationId,
             @RequestParam(value = "locale", required = false, defaultValue = "tr") String locale,
@@ -103,7 +104,7 @@ public class IyzicoPaymentController {
         String normalizedLocale = "en".equalsIgnoreCase(locale) ? "en" : "tr";
         URI redirectUrl = UriComponentsBuilder.fromUriString(properties.getFrontendBaseUrl())
                 .pathSegment(normalizedLocale, "account", "orders", String.valueOf(response.getOrderId()))
-                .queryParam("payment", response.isSuccess() ? "success" : "failed")
+                .queryParam("payment", response.isSuccess() ? "success" : PAYMENT_STATUS_FAILED)
                 .build()
                 .toUri();
         return ResponseEntity.status(HttpStatus.FOUND)

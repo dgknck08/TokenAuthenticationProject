@@ -8,7 +8,6 @@ import com.example.ecommerce.inventory.service.InventoryService;
 import com.example.ecommerce.product.model.Product;
 import com.example.ecommerce.product.repository.ProductRepository;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -32,9 +31,8 @@ public class CartItemServiceImpl implements CartItemService {
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
     private final InventoryService inventoryService;
-    @Autowired
     @Lazy
-    private CartItemService selfProxy = this;
+    private final CartItemService selfProxy;
 
     // ================ Basic CRUD Operations ================
     

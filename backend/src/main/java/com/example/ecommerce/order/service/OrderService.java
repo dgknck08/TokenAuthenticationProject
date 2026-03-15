@@ -42,6 +42,9 @@ import java.util.concurrent.TimeUnit;
 @Transactional
 public class OrderService {
     private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
+    private static final String METRIC_OUTCOME_SUCCESS = "success";
+    private static final String METRIC_OUTCOME_FAILED = "failed";
+    private static final String METRIC_ACTION_CANCEL_CUSTOMER = "cancel_customer";
 
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
@@ -104,7 +107,7 @@ public class OrderService {
             order.getItems().add(item);
         }
         Order saved = orderRepository.save(order);
-        recordOrderMetric("create", "success", startNanos);
+        recordOrderMetric("create", METRIC_OUTCOME_SUCCESS, startNanos);
         logOrderAudit(user.getId(), username, AuditLog.AuditAction.ORDER_CREATED, saved);
         logger.info("event=order_created orderId={} username={} totalAmount={}", saved.getId(), username, saved.getTotalAmount());
         return toResponse(saved);
@@ -121,7 +124,7 @@ public class OrderService {
                 request.getCouponCode(),
                 request.getShippingMethod()
         );
-        recordOrderMetric("quote", "success", startNanos);
+        recordOrderMetric("quote", METRIC_OUTCOME_SUCCESS, startNanos);
         auditService.logSystemEvent(
                 user.getId(),
                 username,
@@ -178,11 +181,11 @@ public class OrderService {
         long startNanos = System.nanoTime();
         Order order = loadOrderWithItems(orderId);
         if (!order.getUsername().equals(username)) {
-            recordOrderMetric("cancel_customer", "failed", startNanos);
+            recordOrderMetric(METRIC_ACTION_CANCEL_CUSTOMER, METRIC_OUTCOME_FAILED, startNanos);
             throw new OrderAccessDeniedException("Order does not belong to current user.");
         }
         if (order.getStatus() != OrderStatus.CREATED) {
-            recordOrderMetric("cancel_customer", "failed", startNanos);
+            recordOrderMetric(METRIC_ACTION_CANCEL_CUSTOMER, METRIC_OUTCOME_FAILED, startNanos);
             throw new IllegalArgumentException("Only created orders can be cancelled by customer.");
         }
         restoreStock(order);
@@ -190,7 +193,7 @@ public class OrderService {
         order.setCancelReason(trimOrNull(cancelReason));
         order.setCancelledAt(Instant.now());
         Order saved = orderRepository.save(order);
-        recordOrderMetric("cancel_customer", "success", startNanos);
+        recordOrderMetric(METRIC_ACTION_CANCEL_CUSTOMER, METRIC_OUTCOME_SUCCESS, startNanos);
         logOrderAudit(order.getUserId(), username, AuditLog.AuditAction.ORDER_CANCELLED, saved);
         logger.info("event=order_cancelled_by_customer orderId={} username={}", saved.getId(), username);
         return toResponse(saved);
@@ -204,7 +207,7 @@ public class OrderService {
         long startNanos = System.nanoTime();
         Order order = loadOrderWithItems(orderId);
         if (order.getStatus() != OrderStatus.CREATED) {
-            recordOrderMetric("cancel", "failed", startNanos);
+            recordOrderMetric("cancel", METRIC_OUTCOME_FAILED, startNanos);
             throw new IllegalArgumentException("Only created orders can be cancelled.");
         }
         restoreStock(order);
@@ -212,7 +215,7 @@ public class OrderService {
         order.setCancelReason(trimOrNull(cancelReason));
         order.setCancelledAt(Instant.now());
         Order saved = orderRepository.save(order);
-        recordOrderMetric("cancel", "success", startNanos);
+        recordOrderMetric("cancel", METRIC_OUTCOME_SUCCESS, startNanos);
         logOrderAudit(order.getUserId(), adminUsername, AuditLog.AuditAction.ORDER_CANCELLED, saved);
         logger.info("event=order_cancelled orderId={} admin={}", saved.getId(), adminUsername);
         return toResponse(saved);
@@ -222,14 +225,14 @@ public class OrderService {
         long startNanos = System.nanoTime();
         Order order = loadOrderWithItems(orderId);
         if (order.getStatus() != OrderStatus.PAID) {
-            recordOrderMetric("refund", "failed", startNanos);
+            recordOrderMetric("refund", METRIC_OUTCOME_FAILED, startNanos);
             throw new IllegalArgumentException("Only paid orders can be refunded.");
         }
         restoreStock(order);
         order.setStatus(OrderStatus.REFUNDED);
         order.setRefundedAt(Instant.now());
         Order saved = orderRepository.save(order);
-        recordOrderMetric("refund", "success", startNanos);
+        recordOrderMetric("refund", METRIC_OUTCOME_SUCCESS, startNanos);
         logOrderAudit(order.getUserId(), adminUsername, AuditLog.AuditAction.ORDER_REFUNDED, saved);
         logger.info("event=order_refunded orderId={} admin={}", saved.getId(), adminUsername);
         return toResponse(saved);
@@ -239,13 +242,13 @@ public class OrderService {
         long startNanos = System.nanoTime();
         Order order = loadOrderWithItems(orderId);
         if (order.getStatus() != OrderStatus.PAID) {
-            recordOrderMetric("pack", "failed", startNanos);
+            recordOrderMetric("pack", METRIC_OUTCOME_FAILED, startNanos);
             throw new IllegalArgumentException("Only paid orders can be packed.");
         }
         order.setStatus(OrderStatus.PACKED);
         order.setPackedAt(Instant.now());
         Order saved = orderRepository.save(order);
-        recordOrderMetric("pack", "success", startNanos);
+        recordOrderMetric("pack", METRIC_OUTCOME_SUCCESS, startNanos);
         logOrderAudit(order.getUserId(), adminUsername, AuditLog.AuditAction.ORDER_PACKED, saved);
         logger.info("event=order_packed orderId={} admin={}", saved.getId(), adminUsername);
         return toResponse(saved);
@@ -255,14 +258,14 @@ public class OrderService {
         long startNanos = System.nanoTime();
         Order order = loadOrderWithItems(orderId);
         if (order.getStatus() != OrderStatus.PACKED) {
-            recordOrderMetric("ship", "failed", startNanos);
+            recordOrderMetric("ship", METRIC_OUTCOME_FAILED, startNanos);
             throw new IllegalArgumentException("Only packed orders can be shipped.");
         }
         order.setStatus(OrderStatus.SHIPPED);
         order.setTrackingNumber(trimOrNull(request.getTrackingNumber()));
         order.setShippedAt(Instant.now());
         Order saved = orderRepository.save(order);
-        recordOrderMetric("ship", "success", startNanos);
+        recordOrderMetric("ship", METRIC_OUTCOME_SUCCESS, startNanos);
         logOrderAudit(order.getUserId(), adminUsername, AuditLog.AuditAction.ORDER_SHIPPED, saved);
         logger.info("event=order_shipped orderId={} admin={} trackingNumber={}", saved.getId(), adminUsername, saved.getTrackingNumber());
         return toResponse(saved);
@@ -272,13 +275,13 @@ public class OrderService {
         long startNanos = System.nanoTime();
         Order order = loadOrderWithItems(orderId);
         if (order.getStatus() != OrderStatus.SHIPPED) {
-            recordOrderMetric("deliver", "failed", startNanos);
+            recordOrderMetric("deliver", METRIC_OUTCOME_FAILED, startNanos);
             throw new IllegalArgumentException("Only shipped orders can be delivered.");
         }
         order.setStatus(OrderStatus.DELIVERED);
         order.setDeliveredAt(Instant.now());
         Order saved = orderRepository.save(order);
-        recordOrderMetric("deliver", "success", startNanos);
+        recordOrderMetric("deliver", METRIC_OUTCOME_SUCCESS, startNanos);
         logOrderAudit(order.getUserId(), adminUsername, AuditLog.AuditAction.ORDER_DELIVERED, saved);
         logger.info("event=order_delivered orderId={} admin={}", saved.getId(), adminUsername);
         return toResponse(saved);
