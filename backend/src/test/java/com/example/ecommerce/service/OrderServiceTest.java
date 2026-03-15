@@ -17,7 +17,6 @@ import com.example.ecommerce.order.service.OrderPricingItem;
 import com.example.ecommerce.order.service.OrderPricingResult;
 import com.example.ecommerce.order.service.OrderService;
 import com.example.ecommerce.product.model.Product;
-import com.example.ecommerce.product.repository.ProductRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,8 +42,6 @@ class OrderServiceTest {
     @Mock
     private UserRepository userRepository;
     @Mock
-    private ProductRepository productRepository;
-    @Mock
     private InventoryService inventoryService;
     @Mock
     private CheckoutPricingService checkoutPricingService;
@@ -58,7 +55,6 @@ class OrderServiceTest {
         orderService = new OrderService(
                 orderRepository,
                 userRepository,
-                productRepository,
                 inventoryService,
                 checkoutPricingService,
                 auditService,

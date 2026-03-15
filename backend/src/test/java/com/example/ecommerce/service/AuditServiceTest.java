@@ -28,7 +28,7 @@ class AuditServiceTest {
     void logSystemEvent_shouldIncludeCorrelationIdAndCategory() {
         AuditLogRepository repository = mock(AuditLogRepository.class);
         when(repository.save(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation -> invocation.getArgument(0));
-        AuditService service = new AuditService(repository, new ObjectMapper());
+        AuditService service = new AuditService(repository, new ObjectMapper(), null);
         CorrelationIdContext.set("cid-456");
 
         service.logSystemEvent(1L, "alice", AuditLog.AuditAction.ORDER_CREATED, "Order event", Map.of("orderId", 10));
@@ -44,7 +44,7 @@ class AuditServiceTest {
     void logAuthEvent_shouldIncludeCorrelationIdAndCategory() {
         AuditLogRepository repository = mock(AuditLogRepository.class);
         when(repository.save(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation -> invocation.getArgument(0));
-        AuditService service = new AuditService(repository, new ObjectMapper());
+        AuditService service = new AuditService(repository, new ObjectMapper(), null);
         CorrelationIdContext.set("cid-auth");
 
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/auth/login");
