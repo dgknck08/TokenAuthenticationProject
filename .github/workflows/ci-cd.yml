@@ -125,10 +125,9 @@ jobs:
         if: (success() || failure()) && steps.test-report-files.outputs.has_reports == 'true'
         with:
           name: Maven Tests
-          path: |
-            backend/target/surefire-reports/*.xml
-            backend/target/failsafe-reports/*.xml
+          path: backend/target/surefire-reports/*.xml,backend/target/failsafe-reports/*.xml
           reporter: java-junit
+          fail-on-empty: 'false'
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload test results
