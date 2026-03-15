@@ -66,13 +66,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 .ignoringRequestMatchers(
+                    "/api/**",
                     "/actuator/health",
-                    "/api/auth/login",
-                    "/api/auth/register",
-                    "/api/auth/verify-email",
-                    "/api/auth/resend-verification",
-                    "/api/auth/forgot-password",
-                    "/api/auth/reset-password",
                     "/api/payments/iyzico/callback",
                     "/api/payments/iyzico/webhook"
                 )
