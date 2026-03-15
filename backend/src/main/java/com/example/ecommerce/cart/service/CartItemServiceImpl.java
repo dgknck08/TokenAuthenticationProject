@@ -252,9 +252,6 @@ public class CartItemServiceImpl implements CartItemService {
     @Transactional(readOnly = true)
     public List<CartItem> findExpiredItems(Long cartId, int maxAgeInDays) {
         log.debug("Finding expired items (older than {} days) for cart ID: {}", maxAgeInDays, cartId);
-        
-        // Bu method için CartItem entity'sinde createdAt veya updatedAt field'ı olmalı
-        // Şimdilik empty list döndürüyoruz
         return List.of();
     }
     
@@ -331,7 +328,6 @@ public class CartItemServiceImpl implements CartItemService {
     }
     
     private void updateItemPrice(CartItem item) {
-        // Eğer fiyat güncellemesi gerekiyorsa
         if (item.getId() != null) { // Existing item
             Product currentProduct = productRepository.findById(item.getProduct().getId())
                     .orElse(null);
@@ -340,8 +336,6 @@ public class CartItemServiceImpl implements CartItemService {
                 !item.getUnitPrice().equals(currentProduct.getPrice())) {
                 log.debug("Price mismatch detected. Updating from {} to {} for item {}", 
                         item.getUnitPrice(), currentProduct.getPrice(), item.getId());
-                // İsteğe bağlı: Fiyatı otomatik güncelle veya exception fırlat
-                // item.setUnitPrice(currentProduct.getPrice());
             }
         }
     }

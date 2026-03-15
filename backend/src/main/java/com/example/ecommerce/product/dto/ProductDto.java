@@ -1,11 +1,11 @@
 package com.example.ecommerce.product.dto;
 
 import java.math.BigDecimal;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
@@ -25,10 +25,6 @@ public class ProductDto {
     @DecimalMin(value = "0.0", inclusive = true, message = "Price must be greater than or equal to 0.")
     private BigDecimal price;
     @Size(max = 2048, message = "Image URL is too long.")
-    @Pattern(
-        regexp = "^$|^(https?://.+|/products/.+)\\.(png|jpe?g|webp|gif)(\\?.*)?$",
-        message = "Image URL must be an http(s) URL or /products path ending with a supported image extension."
-    )
     private String imageUrl;
     @NotBlank(message = "Category is required.")
     @Size(max = 120, message = "Category is too long.")
@@ -53,5 +49,28 @@ public class ProductDto {
         this.price = price;
         this.imageUrl = imageUrl;
         this.category = category;
+    }
+
+    @AssertTrue(message = "Image URL must be an http(s) URL or /products path ending with a supported image extension.")
+    public boolean isImageUrlValid() {
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return true;
+        }
+
+        String normalized = imageUrl.trim().toLowerCase();
+        boolean validPrefix = normalized.startsWith("http://")
+                || normalized.startsWith("https://")
+                || normalized.startsWith("/products/");
+        if (!validPrefix) {
+            return false;
+        }
+
+        int queryIndex = normalized.indexOf('?');
+        String path = queryIndex >= 0 ? normalized.substring(0, queryIndex) : normalized;
+        return path.endsWith(".png")
+                || path.endsWith(".jpg")
+                || path.endsWith(".jpeg")
+                || path.endsWith(".webp")
+                || path.endsWith(".gif");
     }
 }

@@ -14,9 +14,9 @@ import com.example.ecommerce.order.model.PaymentProviderStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Optional;
@@ -33,25 +33,25 @@ class IyzicoPaymentControllerSecurityIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private IyzicoPaymentService paymentService;
 
-    @MockBean
+    @MockitoBean
     private IyzicoProperties iyzicoProperties;
 
-    @MockBean
+    @MockitoBean
     private IdempotencyService idempotencyService;
 
-    @MockBean
+    @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
 
-    @MockBean
+    @MockitoBean
     private JwtValidationService jwtValidationService;
 
-    @MockBean
+    @MockitoBean
     private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
-    @MockBean
+    @MockitoBean
     private JpaMetamodelMappingContext jpaMetamodelMappingContext;
 
     @Test

@@ -19,7 +19,6 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Component
 public class JwtTokenProvider {
@@ -94,7 +93,7 @@ this.userDetailsCache = userDetailsCache;
         List<String> roles = authentication.getAuthorities().stream()
                             .map(GrantedAuthority::getAuthority)
                             .filter(authority -> authority.startsWith("ROLE_"))
-                            .collect(Collectors.toList());
+                            .toList();
         return generateTokenWithUsername(username, roles);
     }
 

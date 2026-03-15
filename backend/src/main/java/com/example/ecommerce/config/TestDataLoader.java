@@ -107,42 +107,22 @@ public class TestDataLoader implements CommandLineRunner {
         for (SeedProduct seed : products) {
             Product product = productRepository.findBySku(seed.sku())
                     .map(existing -> applySeed(existing, seed))
-                    .orElseGet(() -> buildProduct(
-                            seed.name(),
-                            seed.description(),
-                            seed.price(),
-                            seed.imageUrl(),
-                            seed.category(),
-                            seed.brand(),
-                            seed.sku(),
-                            seed.color(),
-                            seed.stock()
-                    ));
+                    .orElseGet(() -> buildProduct(seed));
             productRepository.save(product);
         }
     }
 
-    private Product buildProduct(
-            String name,
-            String description,
-            BigDecimal price,
-            String imageUrl,
-            String category,
-            String brand,
-            String sku,
-            String color,
-            int stock
-    ) {
+    private Product buildProduct(SeedProduct seed) {
         Product product = new Product();
-        product.setName(name);
-        product.setDescription(description);
-        product.setPrice(price);
-        product.setImageUrl(imageUrl);
-        product.setCategory(category);
-        product.setBrand(brand);
-        product.setSku(sku);
-        product.setColor(color);
-        product.setStock(stock);
+        product.setName(seed.name());
+        product.setDescription(seed.description());
+        product.setPrice(seed.price());
+        product.setImageUrl(seed.imageUrl());
+        product.setCategory(seed.category());
+        product.setBrand(seed.brand());
+        product.setSku(seed.sku());
+        product.setColor(seed.color());
+        product.setStock(seed.stock());
         return product;
     }
 

@@ -18,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -153,7 +152,7 @@ public class GuestCartService {
     private CartDto convertToCartDto(GuestCart guestCart) {
         List<CartItemDto> itemDtos = guestCart.getItems().values().stream()
                 .map(this::convertToCartItemDto)
-                .collect(Collectors.toList());
+                .toList();
         
         CartDto cartDto = new CartDto();
         cartDto.setItems(itemDtos);

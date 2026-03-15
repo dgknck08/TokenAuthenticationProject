@@ -11,6 +11,9 @@ public class CookieUtil {
     private static final boolean COOKIE_SECURE =
             Boolean.parseBoolean(System.getenv().getOrDefault("APP_COOKIE_SECURE", "true"));
 
+    private CookieUtil() {
+    }
+
     public static ResponseCookie createRefreshTokenCookie(String token, int maxAgeSeconds) {
         return ResponseCookie.from(COOKIE_NAME, token)
                 .httpOnly(true)

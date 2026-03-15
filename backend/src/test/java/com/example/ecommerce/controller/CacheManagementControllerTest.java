@@ -13,6 +13,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Map;
@@ -32,16 +33,16 @@ public class CacheManagementControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @org.springframework.boot.test.mock.mockito.MockBean
+    @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
 
-    @org.springframework.boot.test.mock.mockito.MockBean
+    @MockitoBean
     private JwtValidationService jwtValidationService;
 
-    @org.springframework.boot.test.mock.mockito.MockBean
+    @MockitoBean
     private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
-    @org.springframework.boot.test.mock.mockito.MockBean
+    @MockitoBean
     private JpaMetamodelMappingContext jpaMetamodelMappingContext;
 
     @Test

@@ -63,11 +63,10 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
     @Override
     public void requestReset(String email) {
-        if (email == null || email.isBlank()) {
+        String normalizedEmail = normalizeEmail(email);
+        if (normalizedEmail == null) {
             return;
         }
-
-        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
         userRepository.findByEmail(normalizedEmail).ifPresent(this::createAndSendToken);
     }
 
@@ -116,26 +115,27 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     }
 
     private void sendResetEmail(String to, String fullName, String resetUrl) {
-        if (to == null || to.isBlank()) {
+        String normalizedRecipient = trimToNull(to);
+        if (normalizedRecipient == null) {
             return;
         }
 
         JavaMailSender configuredMailSender = mailSender.orElse(null);
         if (configuredMailSender == null) {
-            logger.warn("JavaMailSender is not configured. Password reset email was not sent for {}.", sanitizeForLog(to));
+            logger.warn("JavaMailSender is not configured. Password reset email was not sent for {}.", sanitizeForLog(normalizedRecipient));
             return;
         }
 
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(emailFrom);
-            message.setTo(to);
+            message.setTo(normalizedRecipient);
             message.setSubject("Reset your password");
             message.setText(buildEmailBody(fullName, resetUrl));
             configuredMailSender.send(message);
-            logger.info("Password reset email sent to {}", sanitizeForLog(to));
+            logger.info("Password reset email sent to {}", sanitizeForLog(normalizedRecipient));
         } catch (Exception e) {
-            logger.error("Failed to send password reset email to {}", sanitizeForLog(to), e);
+            logger.error("Failed to send password reset email to {}", sanitizeForLog(normalizedRecipient), e);
         }
     }
 
@@ -152,7 +152,10 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     }
 
     private String buildEmailBody(String fullName, String resetUrl) {
-        String displayName = (fullName == null || fullName.isBlank()) ? "there" : fullName;
+        String displayName = trimToNull(fullName);
+        if (displayName == null) {
+            displayName = "there";
+        }
         return "Hi " + displayName + ",\n\n"
                 + "Use the link below to reset your password:\n"
                 + resetUrl + "\n\n"
@@ -160,12 +163,17 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     }
 
     private String buildFrontendTokenUrl(String baseUrl, String rawToken) {
-        String normalizedBase = baseUrl == null ? "" : baseUrl.trim();
-        if (normalizedBase.isEmpty()) {
+        String normalizedBase = trimToNull(baseUrl);
+        if (normalizedBase == null) {
             return "";
         }
         String separator = normalizedBase.contains("#") ? "&" : "#";
         return normalizedBase + separator + "token=" + rawToken;
+    }
+
+    private String normalizeEmail(String email) {
+        String trimmed = trimToNull(email);
+        return trimmed == null ? null : trimmed.toLowerCase(Locale.ROOT);
     }
 
     private String generateToken() {
@@ -189,5 +197,13 @@ public class PasswordResetServiceImpl implements PasswordResetService {
             return null;
         }
         return value.replaceAll("[\\n\\r\\t]", "_");
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

@@ -108,23 +108,11 @@ public class IyzicoGatewayClient {
     }
 
     private Address buildShippingAddress(Order order, User user) {
-        Address address = new Address();
-        address.setContactName(resolveContactName(order, user));
-        address.setCity(defaultIfBlank(order.getShippingCity(), DEFAULT_CITY));
-        address.setCountry(defaultIfBlank(order.getShippingCountry(), DEFAULT_COUNTRY));
-        address.setAddress(defaultIfBlank(order.getShippingAddressLine(), "N/A"));
-        address.setZipCode(defaultIfBlank(order.getShippingPostalCode(), DEFAULT_ZIP_CODE));
-        return address;
+        return buildAddress(order, resolveContactName(order, user));
     }
 
     private Address buildBillingAddress(Order order, User user) {
-        Address address = new Address();
-        address.setContactName(resolveContactName(order, user));
-        address.setCity(defaultIfBlank(order.getShippingCity(), DEFAULT_CITY));
-        address.setCountry(defaultIfBlank(order.getShippingCountry(), DEFAULT_COUNTRY));
-        address.setAddress(defaultIfBlank(order.getShippingAddressLine(), "N/A"));
-        address.setZipCode(defaultIfBlank(order.getShippingPostalCode(), DEFAULT_ZIP_CODE));
-        return address;
+        return buildAddress(order, resolveBillingContactName(order, user));
     }
 
     private List<BasketItem> buildBasketItems(Order order) {
@@ -189,6 +177,20 @@ public class IyzicoGatewayClient {
         String lastName = defaultIfBlank(user.getLastName(), "");
         String combined = (firstName + " " + lastName).trim();
         return combined.isEmpty() ? "Customer User" : combined;
+    }
+
+    private String resolveBillingContactName(Order order, User user) {
+        return resolveContactName(order, user);
+    }
+
+    private Address buildAddress(Order order, String contactName) {
+        Address address = new Address();
+        address.setContactName(contactName);
+        address.setCity(defaultIfBlank(order.getShippingCity(), DEFAULT_CITY));
+        address.setCountry(defaultIfBlank(order.getShippingCountry(), DEFAULT_COUNTRY));
+        address.setAddress(defaultIfBlank(order.getShippingAddressLine(), "N/A"));
+        address.setZipCode(defaultIfBlank(order.getShippingPostalCode(), DEFAULT_ZIP_CODE));
+        return address;
     }
 
     private String normalizeLocale(String locale) {

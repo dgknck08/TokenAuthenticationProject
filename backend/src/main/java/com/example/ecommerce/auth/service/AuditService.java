@@ -7,33 +7,36 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+
 @Service
 @Transactional
 public class AuditService {
     private static final Logger logger = LoggerFactory.getLogger(AuditService.class);
     private final AuditLogRepository auditLogRepository;
     private final ObjectMapper objectMapper;
-    @Autowired
-    @Lazy
-    private AuditService selfProxy;
-    public AuditService(AuditLogRepository auditLogRepository, ObjectMapper objectMapper) {
+    private final AuditService selfProxy;
+
+    public AuditService(AuditLogRepository auditLogRepository,
+                        ObjectMapper objectMapper,
+                        @Lazy AuditService selfProxy) {
         this.auditLogRepository = auditLogRepository;
         this.objectMapper = objectMapper;
-        this.selfProxy = this;
+        this.selfProxy = selfProxy;
     }
+
     public void logAuthEvent(Long userId, String username, AuditLog.AuditAction action,
                              String description, HttpServletRequest request) {
-        selfProxy.logAuthEventAsync(userId, username, action, description, snapshotRequest(request));
+        getSelfProxy().logAuthEventAsync(userId, username, action, description, snapshotRequest(request));
     }
     @Async("auditExecutor")
     public CompletableFuture<Void> logAuthEventAsync(Long userId, String username, AuditLog.AuditAction action,
@@ -67,7 +70,7 @@ public class AuditService {
         }
     }
     public void logSystemEvent(Long userId, String username, AuditLog.AuditAction action, String description, Map<String, Object> details) {
-        selfProxy.logSystemEventAsync(userId, username, action, description, details);
+        getSelfProxy().logSystemEventAsync(userId, username, action, description, details);
     }
     @Async("auditExecutor")
     public CompletableFuture<Void> logSystemEventAsync(Long userId, String username, AuditLog.AuditAction action,
@@ -127,11 +130,18 @@ public class AuditService {
         return request.getRemoteAddr();
     }
     private void enrichAuditDetails(Map<String, Object> details, String category) {
+        if (details == null) {
+            return;
+        }
         String correlationId = CorrelationIdContext.get();
         details.putIfAbsent("eventCategory", category);
         if (correlationId != null && !correlationId.isBlank()) {
             details.putIfAbsent("correlationId", correlationId);
         }
+    }
+
+    private AuditService getSelfProxy() {
+        return selfProxy != null ? selfProxy : this;
     }
     private String sanitizeForLog(String value) {
         if (value == null) {

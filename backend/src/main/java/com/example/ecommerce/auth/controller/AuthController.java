@@ -109,13 +109,15 @@ public class AuthController {
     @PostMapping("/resend-verification")
     public ResponseEntity<Map<String, String>> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
         authService.resendVerificationEmail(request.email());
-        return ResponseEntity.ok(Map.of(KEY_MESSAGE, "If the account exists, a new verification email has been sent"));
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(Map.of(KEY_MESSAGE, "If the account exists, a new verification email has been sent"));
     }
 
     @PostMapping("/forgot-password")
     public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         authService.requestPasswordReset(request.email());
-        return ResponseEntity.ok(Map.of(KEY_MESSAGE, "If the account exists, password reset instructions have been sent"));
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(Map.of(KEY_MESSAGE, "If the account exists, password reset instructions have been sent"));
     }
 
     @PostMapping("/reset-password")

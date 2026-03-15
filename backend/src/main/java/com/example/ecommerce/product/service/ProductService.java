@@ -196,7 +196,7 @@ public class ProductService {
     }
 
     private Page<ProductDto> searchProductsFallback(String category, String brand, String query, Pageable pageable) {
-        Specification<Product> spec = Specification.where(null);
+        Specification<Product> spec = unrestricted();
 
         if (hasText(category)) {
             String normalizedCategory = category.trim().toLowerCase();
@@ -217,5 +217,9 @@ public class ProductService {
         }
 
         return productRepository.findAll(spec, pageable).map(ProductMapper::toDto);
+    }
+
+    private Specification<Product> unrestricted() {
+        return (root, query, cb) -> cb.conjunction();
     }
 }

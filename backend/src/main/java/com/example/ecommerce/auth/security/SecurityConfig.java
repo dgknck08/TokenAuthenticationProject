@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import com.example.ecommerce.auth.service.JwtValidationService;
 
@@ -50,11 +49,11 @@ public class SecurityConfig {
         this.allowedOrigins = Arrays.stream(allowedOriginsCsv.split(","))
                 .map(String::trim)
                 .filter(origin -> !origin.isEmpty())
-                .collect(Collectors.toList());
+                .toList();
         List<String> configuredPatterns = Arrays.stream(allowedOriginPatternsCsv.split(","))
                 .map(String::trim)
                 .filter(pattern -> !pattern.isEmpty())
-                .collect(Collectors.toList());
+                .toList();
         this.allowedOriginPatterns = new ArrayList<>();
         this.allowedOriginPatterns.addAll(this.allowedOrigins);
         this.allowedOriginPatterns.addAll(configuredPatterns);
@@ -69,7 +68,7 @@ public class SecurityConfig {
                 headers.contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'"));
                 headers.referrerPolicy(referrer -> referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER));
                 headers.frameOptions(frame -> frame.deny());
-                headers.permissionsPolicy(permissions -> permissions.policy("camera=(), microphone=(), geolocation=()"));
+                headers.permissionsPolicyHeader(permissions -> permissions.policy("camera=(), microphone=(), geolocation=()"));
                 headers.httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).preload(true).maxAgeInSeconds(31536000));
             })
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

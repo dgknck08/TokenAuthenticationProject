@@ -21,7 +21,6 @@ import com.example.ecommerce.order.model.OrderStatus;
 import com.example.ecommerce.order.model.PaymentProviderStatus;
 import com.example.ecommerce.order.repository.OrderRepository;
 import com.example.ecommerce.product.model.Product;
-import com.example.ecommerce.product.repository.ProductRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import org.slf4j.Logger;
@@ -48,7 +47,6 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
-    private final ProductRepository productRepository;
     private final InventoryService inventoryService;
     private final CheckoutPricingService checkoutPricingService;
     private final AuditService auditService;
@@ -56,14 +54,12 @@ public class OrderService {
 
     public OrderService(OrderRepository orderRepository,
                         UserRepository userRepository,
-                        ProductRepository productRepository,
                         InventoryService inventoryService,
                         CheckoutPricingService checkoutPricingService,
                         AuditService auditService,
                         MeterRegistry meterRegistry) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
-        this.productRepository = productRepository;
         this.inventoryService = inventoryService;
         this.checkoutPricingService = checkoutPricingService;
         this.auditService = auditService;
@@ -312,14 +308,18 @@ public class OrderService {
         List<OrderItemResponse> items = order.getItems().stream()
                 .map(item -> {
                     Long productId = item.getProduct() != null ? item.getProduct().getId() : null;
-                    String productName = item.getProductNameSnapshot() != null
-                            ? item.getProductNameSnapshot()
-                            : (item.getProduct() != null ? item.getProduct().getName() : null);
-                    BigDecimal unitPrice = item.getUnitPrice() != null
-                            ? item.getUnitPrice()
-                            : (item.getProduct() != null && item.getProduct().getPrice() != null
-                                    ? item.getProduct().getPrice()
-                                    : BigDecimal.ZERO);
+                    String productName = item.getProductNameSnapshot();
+                    if (productName == null && item.getProduct() != null) {
+                        productName = item.getProduct().getName();
+                    }
+
+                    BigDecimal unitPrice = item.getUnitPrice();
+                    if (unitPrice == null && item.getProduct() != null) {
+                        unitPrice = item.getProduct().getPrice();
+                    }
+                    if (unitPrice == null) {
+                        unitPrice = BigDecimal.ZERO;
+                    }
                     return OrderItemResponse.builder()
                             .productId(productId)
                             .productName(productName)

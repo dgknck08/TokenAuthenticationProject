@@ -80,23 +80,23 @@ public class IdempotencyService {
         }
 
         String requestHash = hashPayload(requestPayload);
-        IdempotencyKeyRecord record = repository
+        IdempotencyKeyRecord idempotencyRecord = repository
                 .findTopByScopeAndOperationAndIdempotencyKeyOrderByIdDesc(scope, operation, normalizedKey)
                 .orElseGet(IdempotencyKeyRecord::new);
 
-        if (record.getId() != null && !requestHash.equals(record.getRequestHash())) {
+        if (idempotencyRecord.getId() != null && !requestHash.equals(idempotencyRecord.getRequestHash())) {
             throw new IllegalArgumentException("Idempotency key is already used with a different payload.");
         }
 
         try {
-            record.setScope(scope);
-            record.setOperation(operation);
-            record.setIdempotencyKey(normalizedKey);
-            record.setRequestHash(requestHash);
-            record.setResponseStatus(statusCode);
-            record.setResponseBody(objectMapper.writeValueAsString(responseBody));
-            record.setExpiresAt(Instant.now().plusSeconds(Math.max(ttlHours, 1) * 3600));
-            repository.save(record);
+            idempotencyRecord.setScope(scope);
+            idempotencyRecord.setOperation(operation);
+            idempotencyRecord.setIdempotencyKey(normalizedKey);
+            idempotencyRecord.setRequestHash(requestHash);
+            idempotencyRecord.setResponseStatus(statusCode);
+            idempotencyRecord.setResponseBody(objectMapper.writeValueAsString(responseBody));
+            idempotencyRecord.setExpiresAt(Instant.now().plusSeconds(Math.max(ttlHours, 1) * 3600));
+            repository.save(idempotencyRecord);
         } catch (Exception ex) {
             throw new IllegalStateException("Failed to persist idempotent response", ex);
         }

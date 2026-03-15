@@ -4,6 +4,8 @@ import com.example.ecommerce.product.dto.ProductDto;
 import com.example.ecommerce.product.model.Product;
 
 public class ProductMapper {
+    private ProductMapper() {
+    }
 
     public static ProductDto toDto(Product product) {
         if (product == null) return null;

@@ -104,11 +104,10 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
 
     @Override
     public void resendVerification(String email) {
-        if (email == null || email.isBlank()) {
+        String normalizedEmail = normalizeEmail(email);
+        if (normalizedEmail == null) {
             return;
         }
-
-        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
         userRepository.findByEmail(normalizedEmail).ifPresent(user -> {
             if (!user.isEmailVerified()) {
                 createAndSendVerification(user);
@@ -117,26 +116,27 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
     }
 
     private void sendVerificationEmail(String to, String fullName, String verificationUrl) {
-        if (to == null || to.isBlank()) {
+        String normalizedRecipient = trimToNull(to);
+        if (normalizedRecipient == null) {
             return;
         }
 
         JavaMailSender configuredMailSender = mailSender.orElse(null);
         if (configuredMailSender == null) {
-            logger.warn("JavaMailSender is not configured. Verification email was not sent for {}.", sanitizeForLog(to));
+            logger.warn("JavaMailSender is not configured. Verification email was not sent for {}.", sanitizeForLog(normalizedRecipient));
             return;
         }
 
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(emailFrom);
-            message.setTo(to);
+            message.setTo(normalizedRecipient);
             message.setSubject("Verify your email");
             message.setText(buildEmailBody(fullName, verificationUrl));
             configuredMailSender.send(message);
-            logger.info("Verification email sent to {}", sanitizeForLog(to));
+            logger.info("Verification email sent to {}", sanitizeForLog(normalizedRecipient));
         } catch (Exception e) {
-            logger.error("Failed to send verification email to {}", sanitizeForLog(to), e);
+            logger.error("Failed to send verification email to {}", sanitizeForLog(normalizedRecipient), e);
         }
     }
 
@@ -153,7 +153,10 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
     }
 
     private String buildEmailBody(String fullName, String verificationUrl) {
-        String displayName = (fullName == null || fullName.isBlank()) ? "there" : fullName;
+        String displayName = trimToNull(fullName);
+        if (displayName == null) {
+            displayName = "there";
+        }
         return "Hi " + displayName + ",\n\n"
                 + "Please verify your email by opening the link below:\n"
                 + verificationUrl + "\n\n"
@@ -161,12 +164,17 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
     }
 
     private String buildFrontendTokenUrl(String baseUrl, String rawToken) {
-        String normalizedBase = baseUrl == null ? "" : baseUrl.trim();
-        if (normalizedBase.isEmpty()) {
+        String normalizedBase = trimToNull(baseUrl);
+        if (normalizedBase == null) {
             return "";
         }
         String separator = normalizedBase.contains("#") ? "&" : "#";
         return normalizedBase + separator + "token=" + rawToken;
+    }
+
+    private String normalizeEmail(String email) {
+        String trimmed = trimToNull(email);
+        return trimmed == null ? null : trimmed.toLowerCase(Locale.ROOT);
     }
 
     private String generateToken() {
@@ -190,5 +198,13 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
             return null;
         }
         return value.replaceAll("[\\n\\r\\t]", "_");
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

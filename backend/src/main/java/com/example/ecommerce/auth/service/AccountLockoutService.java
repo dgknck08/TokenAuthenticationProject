@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 @Service
@@ -88,7 +89,7 @@ public class AccountLockoutService {
                 logger.warn("Failed login attempt for user: {} from IP: {}. Attempt count: {}",
                         sanitizeForLog(username), sanitizeForLog(ipAddress), userFailedAttempts);
             } else {
-                handleSuccessfulLoginWithPipeline(username, ipAddress, userAgent, request);
+                handleSuccessfulLoginWithPipeline(username, ipAddress, userAgent);
                 logger.info("Successful login for user: {} from IP: {}",
                         sanitizeForLog(username), sanitizeForLog(ipAddress));
             }
@@ -142,7 +143,7 @@ public class AccountLockoutService {
         };
     }
 
-    private void handleSuccessfulLoginWithPipeline(String username, String ipAddress, String userAgent, HttpServletRequest request) {
+    private void handleSuccessfulLoginWithPipeline(String username, String ipAddress, String userAgent) {
         String failedAttemptsKey = FAILED_ATTEMPTS_KEY + username;
 
         redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
@@ -231,12 +232,12 @@ public class AccountLockoutService {
             String lastIp = (String) lastLogin.get(KEY_IP_ADDRESS);
             String lastUserAgent = (String) lastLogin.get(KEY_USER_AGENT);
 
-            if (!ipAddress.equals(lastIp)) {
+            if (!Objects.equals(ipAddress, lastIp)) {
                 suspicious = true;
                 reason += "New location. ";
             }
 
-            if (!userAgent.equals(lastUserAgent)) {
+            if (!Objects.equals(userAgent, lastUserAgent)) {
                 suspicious = true;
                 reason += "New device. ";
             }

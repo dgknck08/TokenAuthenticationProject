@@ -190,10 +190,10 @@ public class JwtBlacklistService {
             
             rawMetadata.forEach((k, v) -> metadata.put(k.toString(), v));
             
-            return metadata.isEmpty() ? null : metadata;
+            return metadata;
         } catch (Exception e) {
             logger.error("Error retrieving token metadata", e);
-            return null;
+            return Map.of();
         }
     }
 
@@ -330,6 +330,9 @@ public class JwtBlacklistService {
     private Map<byte[], byte[]> convertToByteMap(Map<String, Object> map) {
         Map<byte[], byte[]> byteMap = new HashMap<>();
         map.forEach((key, value) -> {
+            if (value == null) {
+                return;
+            }
             byteMap.put(key.getBytes(StandardCharsets.UTF_8), 
                        value.toString().getBytes(StandardCharsets.UTF_8));
         });
@@ -379,7 +382,8 @@ public class JwtBlacklistService {
             try {
                 Instant expiration = jwtUtils.getExpirationDate(tokenReference);
                 return Duration.between(Instant.now(), expiration).getSeconds();
-            } catch (Exception ignored) {
+            } catch (Exception ex) {
+                logger.warn("Failed to resolve TTL from legacy token reference", ex);
                 return -1;
             }
         }
