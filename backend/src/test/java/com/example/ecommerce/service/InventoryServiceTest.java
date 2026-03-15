@@ -30,11 +30,14 @@ class InventoryServiceTest {
     @Mock
     private ProductRepository productRepository;
 
+    @Mock
+    private InventoryService selfProxy;
+
     private InventoryService inventoryService;
 
     @BeforeEach
     void setUp() {
-        inventoryService = new InventoryService(inventoryRepository, productRepository);
+        inventoryService = new InventoryService(inventoryRepository, productRepository, selfProxy);
     }
 
     @Test
@@ -59,9 +62,7 @@ class InventoryServiceTest {
 
     @Test
     void ensureAvailableStock_throwsWhenRequestedExceedsAvailable() {
-        InventoryItem item = new InventoryItem();
-        item.setAvailableStock(2);
-        when(inventoryRepository.findByProductId(3L)).thenReturn(Optional.of(item));
+        when(selfProxy.getAvailableStock(3L)).thenReturn(2);
 
         assertThrows(InsufficientStockException.class, () -> inventoryService.ensureAvailableStock(3L, 5));
     }
