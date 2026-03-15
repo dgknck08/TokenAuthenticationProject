@@ -194,7 +194,7 @@ class AuthControllerTest {
     }
 
     @Test
-    void resendVerification_whenValidBody_returnsOk() throws Exception {
+    void resendVerification_whenValidBody_returnsAccepted() throws Exception {
         String requestJson = """
             {
                 "email": "user@example.com"
@@ -204,7 +204,7 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/auth/resend-verification")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson))
-                .andExpect(status().isOk())
+                .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.message").value("If the account exists, a new verification email has been sent"));
 
         verify(authService).resendVerificationEmail("user@example.com");
