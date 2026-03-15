@@ -5,6 +5,7 @@ import com.example.ecommerce.common.trace.CorrelationIdContext;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
@@ -110,12 +111,13 @@ public class AuditService {
         if (request == null) {
             return null;
         }
+        HttpSession session = request.getSession(false);
         return new RequestAuditInfo(
                 getClientIpAddress(request),
                 request.getHeader("User-Agent"),
                 request.getRequestURI(),
                 request.getMethod(),
-                request.getSession(false) != null ? request.getSession(false).getId() : null
+                session != null ? session.getId() : null
         );
     }
     private String getClientIpAddress(HttpServletRequest request) {

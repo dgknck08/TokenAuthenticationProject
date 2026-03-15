@@ -79,11 +79,13 @@ public class AccountLockoutService {
                 Long[] results = handleFailedLoginWithPipeline(username, ipAddress);
                 Long userFailedAttempts = results[0];
                 Long ipFailedAttempts = results[1];
+                int userFailedAttemptCount = safeLongToInt(userFailedAttempts);
+                int ipFailedAttemptCount = safeLongToInt(ipFailedAttempts);
 
-                saveLoginAttemptDetails(username, ipAddress, userAgent, false, failureReason, userFailedAttempts.intValue());
+                saveLoginAttemptDetails(username, ipAddress, userAgent, false, failureReason, userFailedAttemptCount);
 
-                if (userFailedAttempts >= maxFailedAttempts || ipFailedAttempts >= ipMaxAttempts) {
-                    lockAccount(username, userFailedAttempts.intValue(), request);
+                if (userFailedAttemptCount >= maxFailedAttempts || ipFailedAttemptCount >= ipMaxAttempts) {
+                    lockAccount(username, userFailedAttemptCount, request);
                 }
 
                 logger.warn("Failed login attempt for user: {} from IP: {}. Attempt count: {}",
@@ -306,5 +308,9 @@ public class AccountLockoutService {
             return null;
         }
         return value.replaceAll("[\\n\\r\\t]", "_");
+    }
+
+    private int safeLongToInt(Long value) {
+        return value != null ? value.intValue() : 0;
     }
 }

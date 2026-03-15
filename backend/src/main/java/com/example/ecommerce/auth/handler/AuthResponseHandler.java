@@ -11,6 +11,9 @@ import org.springframework.http.ResponseEntity;
 public class AuthResponseHandler {
     private static final int REFRESH_TOKEN_EXPIRATION = 7 * 24 * 60 * 60; 
 
+    private AuthResponseHandler() {
+    }
+
     public static ResponseEntity<Object> handleLogin(LoginResponse response) {
         if (response.refreshToken() != null) {
             ResponseCookie refreshTokenCookie = CookieUtil.createRefreshTokenCookie(

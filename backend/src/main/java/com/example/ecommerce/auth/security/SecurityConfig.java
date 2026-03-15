@@ -31,6 +31,7 @@ import com.example.ecommerce.auth.service.JwtValidationService;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+    private static final String IYZICO_CALLBACK_PATH = "/api/payments/iyzico/callback";
 
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtValidationService jwtValidationService;
@@ -68,7 +69,7 @@ public class SecurityConfig {
                 .ignoringRequestMatchers(
                     "/api/**",
                     "/actuator/health",
-                    "/api/payments/iyzico/callback",
+                    IYZICO_CALLBACK_PATH,
                     "/api/payments/iyzico/webhook"
                 )
             )
@@ -92,7 +93,7 @@ public class SecurityConfig {
                     "/api/auth/resend-verification",
                     "/api/auth/forgot-password",
                     "/api/auth/reset-password",
-                    "/api/payments/iyzico/callback",
+                    IYZICO_CALLBACK_PATH,
                     "/api/payments/iyzico/webhook"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
@@ -112,7 +113,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/api/payments/iyzico/callback", buildCorsConfiguration(Collections.singletonList("*")));
+        source.registerCorsConfiguration(IYZICO_CALLBACK_PATH, buildCorsConfiguration(Collections.singletonList("*")));
         source.registerCorsConfiguration("/**", buildCorsConfiguration(allowedOriginPatterns));
         return source;
     }
