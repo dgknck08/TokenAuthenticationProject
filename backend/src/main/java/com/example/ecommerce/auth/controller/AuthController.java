@@ -184,7 +184,8 @@ public class AuthController {
 
                 return ResponseEntity.ok(response);
             } catch (Exception e) {
-                return ResponseEntity.ok(Map.of(KEY_VALID, false, "error", e.getMessage()));
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(KEY_VALID, false, "error", e.getMessage()));
             }
         }
         return ResponseEntity.badRequest().body(Map.of(KEY_VALID, false, "error", "No token provided"));

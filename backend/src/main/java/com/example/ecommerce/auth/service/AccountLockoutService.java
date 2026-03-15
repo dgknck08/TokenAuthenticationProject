@@ -73,7 +73,7 @@ public class AccountLockoutService {
     public CompletableFuture<Void> recordLoginAttemptAsync(String username, boolean successful, String failureReason, HttpServletRequest request) {
         try {
             String ipAddress = getClientIpAddress(request);
-            String userAgent = request.getHeader("User-Agent");
+            String userAgent = request != null ? request.getHeader("User-Agent") : null;
 
             if (!successful) {
                 Long[] results = handleFailedLoginWithPipeline(username, ipAddress);
@@ -251,14 +251,15 @@ public class AccountLockoutService {
         redisTemplate.opsForValue().set(suspiciousKey, currentLogin, Duration.ofDays(7));
 
         if (suspicious) {
+            String suspiciousReason = reason.strip();
             logger.warn("Suspicious login detected for user: {} - {}",
-                    sanitizeForLog(username), sanitizeForLog(reason.trim()));
+                    sanitizeForLog(username), sanitizeForLog(suspiciousReason));
 
             auditService.logAuthEvent(
                 null,
                 username,
                 AuditLog.AuditAction.SUSPICIOUS_ACTIVITY,
-                String.format("Suspicious login: %s IP: %s", reason.trim(), ipAddress),
+                String.format("Suspicious login: %s IP: %s", suspiciousReason, ipAddress),
                 null
             );
         }
@@ -283,6 +284,10 @@ public class AccountLockoutService {
     }
 
     private String getClientIpAddress(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
             return xForwardedFor.split(",")[0].trim();

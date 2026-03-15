@@ -28,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = CacheManagementController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @Import(SecurityConfig.class)
-public class CacheManagementControllerTest {
+class CacheManagementControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -47,7 +47,7 @@ public class CacheManagementControllerTest {
 
     @Test
     @WithMockUser(username = "admin", authorities = {"AUDIT_READ", "AUDIT_WRITE"})
-    public void stats_whenAdmin_returnsOk() throws Exception {
+    void stats_whenAdmin_returnsOk() throws Exception {
         Map<String, Object> stats = Map.of(
             "jwtClaimsCache", Map.of("size", 1),
             "jwtValidationCache", Map.of("size", 2),
@@ -64,7 +64,7 @@ public class CacheManagementControllerTest {
 
     @Test
     @WithMockUser(username = "admin", authorities = {"AUDIT_WRITE"})
-    public void clearUserCache_whenAdmin_invokesService() throws Exception {
+    void clearUserCache_whenAdmin_invokesService() throws Exception {
         mockMvc.perform(post("/api/admin/cache/clear/testuser"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.message").value("Cache cleared for user: testuser"));
@@ -74,7 +74,7 @@ public class CacheManagementControllerTest {
 
     @Test
     @WithMockUser(username = "admin", authorities = {"AUDIT_WRITE"})
-    public void clearAllCaches_whenAdmin_invokesService() throws Exception {
+    void clearAllCaches_whenAdmin_invokesService() throws Exception {
         mockMvc.perform(post("/api/admin/cache/clear/all"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.message").value("All caches cleared"));
@@ -84,7 +84,7 @@ public class CacheManagementControllerTest {
 
     @Test
     @WithMockUser(username = "user", authorities = {"PRODUCT_READ"})
-    public void endpoints_whenNonAdmin_forbidden() throws Exception {
+    void endpoints_whenNonAdmin_forbidden() throws Exception {
         mockMvc.perform(get("/api/admin/cache/stats"))
             .andExpect(status().isForbidden());
 

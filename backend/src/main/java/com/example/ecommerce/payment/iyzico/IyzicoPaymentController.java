@@ -22,9 +22,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -86,14 +84,33 @@ public class IyzicoPaymentController {
         return ResponseEntity.ok(paymentService.getPaymentStatus(getCurrentUsername(), orderId));
     }
 
-    @RequestMapping(value = "/callback", method = {RequestMethod.POST, RequestMethod.GET})
+    @GetMapping("/callback")
     @Operation(summary = "Iyzico callback endpoint", description = "Public callback endpoint called by Iyzico after card payment.")
-    public ResponseEntity<Object> handleCallback(
+    public ResponseEntity<Object> handleCallbackGet(
+            @RequestParam(value = "token", required = false) String token,
+            @RequestParam(value = "conversationId", required = false) String conversationId,
+            @RequestParam(value = "locale", required = false, defaultValue = "tr") String locale,
+            @RequestParam(value = "redirect", required = false, defaultValue = "true") boolean redirectToFrontend) {
+        return handleCallbackInternal(token, conversationId, locale, redirectToFrontend, null);
+    }
+
+    @PostMapping("/callback")
+    @Operation(summary = "Iyzico callback endpoint", description = "Public callback endpoint called by Iyzico after card payment.")
+    public ResponseEntity<Object> handleCallbackPost(
             @RequestParam(value = "token", required = false) String token,
             @RequestParam(value = "conversationId", required = false) String conversationId,
             @RequestParam(value = "locale", required = false, defaultValue = "tr") String locale,
             @RequestParam(value = "redirect", required = false, defaultValue = "true") boolean redirectToFrontend,
             @RequestBody(required = false) String payload) {
+        return handleCallbackInternal(token, conversationId, locale, redirectToFrontend, payload);
+    }
+
+    private ResponseEntity<Object> handleCallbackInternal(
+            String token,
+            String conversationId,
+            String locale,
+            boolean redirectToFrontend,
+            String payload) {
         String resolvedToken = resolveToken(token, payload);
         IyzicoPaymentCallbackResponse response = paymentService.handleCallback(resolvedToken, conversationId);
 

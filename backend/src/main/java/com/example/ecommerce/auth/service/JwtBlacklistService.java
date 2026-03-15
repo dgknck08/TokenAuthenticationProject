@@ -4,6 +4,8 @@ import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import com.example.ecommerce.auth.security.JwtUtils;
@@ -188,7 +190,11 @@ public class JwtBlacklistService {
             Map<Object, Object> rawMetadata = redisTemplate.opsForHash().entries(key);
             Map<String, Object> metadata = new HashMap<>();
             
-            rawMetadata.forEach((k, v) -> metadata.put(k.toString(), v));
+            rawMetadata.forEach((k, v) -> {
+                if (k != null) {
+                    metadata.put(k.toString(), v);
+                }
+            });
             
             return metadata;
         } catch (Exception e) {
@@ -271,9 +277,13 @@ public class JwtBlacklistService {
                 .count(500)
                 .build();
 
-            try (Cursor<byte[]> cursor = redisTemplate.getConnectionFactory()
-                    .getConnection()
-                    .scan(options)) {
+            RedisConnectionFactory connectionFactory = redisTemplate.getConnectionFactory();
+            if (connectionFactory == null) {
+                return new HashMap<>();
+            }
+
+            try (RedisConnection connection = connectionFactory.getConnection();
+                 Cursor<byte[]> cursor = connection.scan(options)) {
                 while (cursor.hasNext()) {
                     String key = new String(cursor.next(), StandardCharsets.UTF_8);
                     if (!key.startsWith(USER_TOKENS_KEY)) {
@@ -301,9 +311,13 @@ public class JwtBlacklistService {
                 .count(500)
                 .build();
 
-            try (Cursor<byte[]> cursor = redisTemplate.getConnectionFactory()
-                    .getConnection()
-                    .scan(options)) {
+            RedisConnectionFactory connectionFactory = redisTemplate.getConnectionFactory();
+            if (connectionFactory == null) {
+                return;
+            }
+
+            try (RedisConnection connection = connectionFactory.getConnection();
+                 Cursor<byte[]> cursor = connection.scan(options)) {
                 while (cursor.hasNext()) {
                     String key = new String(cursor.next(), StandardCharsets.UTF_8);
                     Long ttlSeconds = redisTemplate.getExpire(key, TimeUnit.SECONDS);

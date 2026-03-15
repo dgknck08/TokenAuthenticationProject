@@ -72,23 +72,29 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
     @Override
     public void resetPassword(String rawToken, String newPassword) {
-        if (rawToken == null || rawToken.isBlank()) {
+        String normalizedToken = trimToNull(rawToken);
+        if (normalizedToken == null) {
             throw new PasswordResetException("Reset token is required");
         }
-        if (newPassword == null || newPassword.isBlank()) {
+        String normalizedPassword = trimToNull(newPassword);
+        if (normalizedPassword == null) {
             throw new PasswordResetException("New password is required");
         }
 
-        String tokenHash = hashToken(rawToken);
+        String tokenHash = hashToken(normalizedToken);
         PasswordResetToken token = tokenRepository.findByTokenHashAndUsedAtIsNull(tokenHash)
                 .orElseThrow(() -> new PasswordResetException("Invalid password reset token"));
 
-        if (token.getExpiresAt().isBefore(Instant.now())) {
+        Instant expiresAt = token.getExpiresAt();
+        if (expiresAt == null || expiresAt.isBefore(Instant.now())) {
             throw new PasswordResetException("Password reset token has expired");
         }
 
         User user = token.getUser();
-        user.setPassword(passwordEncoder.encode(newPassword));
+        if (user == null || user.getId() == null) {
+            throw new PasswordResetException("Invalid password reset token");
+        }
+        user.setPassword(passwordEncoder.encode(normalizedPassword));
         userRepository.save(user);
         tokenRepository.deleteByUserId(user.getId());
         logger.info("Password reset completed for user: {}", sanitizeForLog(user.getUsername()));
