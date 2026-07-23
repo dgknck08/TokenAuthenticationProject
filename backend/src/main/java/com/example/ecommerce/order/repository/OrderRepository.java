@@ -1,6 +1,7 @@
 package com.example.ecommerce.order.repository;
 
 import com.example.ecommerce.order.model.Order;
+import com.example.ecommerce.order.model.OrderStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
     Page<Order> findByUsernameOrderByCreatedAtDesc(String username, Pageable pageable);
@@ -33,4 +35,16 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             WHERE o.id = :orderId
             """)
     Optional<Order> findByIdWithItemsAndProduct(@Param("orderId") Long orderId);
+
+    @Query("""
+            SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END
+            FROM Order o
+            JOIN o.items oi
+            WHERE o.userId = :userId
+              AND oi.product.id = :productId
+              AND o.status IN :statuses
+            """)
+    boolean hasPurchasedProduct(@Param("userId") Long userId,
+                                @Param("productId") Long productId,
+                                @Param("statuses") Set<OrderStatus> statuses);
 }
