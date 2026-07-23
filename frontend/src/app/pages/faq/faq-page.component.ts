@@ -1,0 +1,12 @@
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
+
+@Component({
+  selector: 'app-faq-page',
+  standalone: true,
+  imports: [RouterLink],
+  templateUrl: './faq-page.component.html',
+  styleUrl: './faq-page.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+export class FaqPageComponent {}

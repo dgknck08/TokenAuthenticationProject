@@ -1,0 +1,274 @@
+<aside class="fpanel">
+  <div class="fp-head">
+    <span class="fp-title">Filtreler</span>
+    @if (activeFilterCount > 0) {
+      <button class="fp-clear" type="button" (click)="resetFilters.emit()">
+        Temizle ({{ activeFilterCount }})
+      </button>
+    }
+  </div>
+
+  @if (activeFilterCount > 0) {
+    <div class="fp-chips">
+      @for (category of activeFilters.categories; track category) {
+        <span class="fp-chip" (click)="toggleCategory(category)">
+          {{ category }} <span class="fp-chip-x">×</span>
+        </span>
+      }
+      @for (brand of activeFilters.brands; track brand) {
+        <span class="fp-chip" (click)="toggleBrand(brand)">
+          {{ brand }} <span class="fp-chip-x">×</span>
+        </span>
+      }
+      @for (badge of activeFilters.badges; track badge) {
+        <span class="fp-chip" (click)="toggleBadge(badge)">
+          {{ badge }} <span class="fp-chip-x">×</span>
+        </span>
+      }
+      @for (rating of activeFilters.ratings; track rating) {
+        <span class="fp-chip" (click)="toggleRating(rating)">
+          {{ stars(rating) }}+ <span class="fp-chip-x">×</span>
+        </span>
+      }
+      @if (activeFilters.inStockOnly) {
+        <span class="fp-chip" (click)="toggleStock()">
+          Stokta var <span class="fp-chip-x">×</span>
+        </span>
+      }
+      @if (activeFilters.priceRange.min > priceMin || activeFilters.priceRange.max < priceMax) {
+        <span class="fp-chip" (click)="clearPriceRange()">
+          ₺{{ activeFilters.priceRange.min | number }} - ₺{{ activeFilters.priceRange.max | number }}
+          <span class="fp-chip-x">×</span>
+        </span>
+      }
+    </div>
+  }
+
+  <div class="fp-section">
+    <button class="fp-sec-hd" type="button" (click)="toggleSection('search')">
+      <span>Urun Ara</span>
+      <span class="fp-caret" [class.open]="!isCollapsed('search')">›</span>
+    </button>
+    @if (!isCollapsed('search')) {
+      <div class="fp-sec-body">
+        <div class="fp-search-wrap">
+          <span class="fp-search-ico">⌕</span>
+          <input
+            class="fp-search"
+            type="text"
+            placeholder="Urun adi ara..."
+            [ngModel]="activeFilters.search"
+            (ngModelChange)="onSearchChange($event)"
+          />
+          @if (activeFilters.search) {
+            <button class="fp-search-clear" type="button" (click)="onSearchChange('')">×</button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (categories.length > 0) {
+    <div class="fp-section">
+      <button class="fp-sec-hd" type="button" (click)="toggleSection('category')">
+        <span>Kategori</span>
+        <span class="fp-caret" [class.open]="!isCollapsed('category')">›</span>
+      </button>
+      @if (!isCollapsed('category')) {
+        <div class="fp-sec-body">
+          @for (category of categories; track trackByName($index, category)) {
+            <label class="fp-check-row" [class.active]="activeFilters.categories.includes(category.name)">
+              <input
+                type="checkbox"
+                class="fp-check"
+                [checked]="activeFilters.categories.includes(category.name)"
+                (change)="toggleCategory(category.name)"
+              />
+              <span class="fp-check-mark"></span>
+              <span class="fp-check-label">{{ category.name }}</span>
+              <span class="fp-check-count">{{ category.count }}</span>
+            </label>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <div class="fp-section">
+    <button class="fp-sec-hd" type="button" (click)="toggleSection('price')">
+      <span>Fiyat Araligi</span>
+      <span class="fp-caret" [class.open]="!isCollapsed('price')">›</span>
+    </button>
+    @if (!isCollapsed('price')) {
+      <div class="fp-sec-body">
+        <div class="fp-price-display">
+          <span>₺{{ sliderMin | number }}</span>
+          <span class="fp-price-dash">-</span>
+          <span>₺{{ sliderMax | number }}</span>
+        </div>
+        <div class="fp-range-wrap">
+          <div class="fp-range-track">
+            <div
+              class="fp-range-fill"
+              [style.left.%]="rangeFillLeft()"
+              [style.right.%]="rangeFillRight()"
+            ></div>
+          </div>
+          <input
+            class="fp-range fp-range-a"
+            type="range"
+            [min]="priceMin"
+            [max]="priceMax"
+            [ngModel]="sliderMin"
+            (ngModelChange)="onPriceMinChange(+$event)"
+          />
+          <input
+            class="fp-range fp-range-b"
+            type="range"
+            [min]="priceMin"
+            [max]="priceMax"
+            [ngModel]="sliderMax"
+            (ngModelChange)="onPriceMaxChange(+$event)"
+          />
+        </div>
+        <div class="fp-price-inputs">
+          <div class="fp-price-field">
+            <label class="fp-price-lbl">Min</label>
+            <div class="fp-price-inp-wrap">
+              <span class="fp-price-sym">₺</span>
+              <input
+                class="fp-price-inp"
+                type="number"
+                [ngModel]="sliderMin"
+                (ngModelChange)="onPriceMinChange(+$event)"
+              />
+            </div>
+          </div>
+          <div class="fp-price-field">
+            <label class="fp-price-lbl">Max</label>
+            <div class="fp-price-inp-wrap">
+              <span class="fp-price-sym">₺</span>
+              <input
+                class="fp-price-inp"
+                type="number"
+                [ngModel]="sliderMax"
+                (ngModelChange)="onPriceMaxChange(+$event)"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (brands.length > 0) {
+    <div class="fp-section">
+      <button class="fp-sec-hd" type="button" (click)="toggleSection('brand')">
+        <span>Marka</span>
+        <span class="fp-caret" [class.open]="!isCollapsed('brand')">›</span>
+      </button>
+      @if (!isCollapsed('brand')) {
+        <div class="fp-sec-body">
+          @for (brand of visibleBrands; track trackByName($index, brand)) {
+            <label class="fp-check-row" [class.active]="activeFilters.brands.includes(brand.name)">
+              <input
+                type="checkbox"
+                class="fp-check"
+                [checked]="activeFilters.brands.includes(brand.name)"
+                (change)="toggleBrand(brand.name)"
+              />
+              <span class="fp-check-mark"></span>
+              <span class="fp-check-label">{{ brand.name }}</span>
+              <span class="fp-check-count">{{ brand.count }}</span>
+            </label>
+          }
+          @if (brands.length > BRAND_LIMIT) {
+            <button class="fp-show-more" type="button" (click)="showAllBrands = !showAllBrands">
+              {{ showAllBrands ? 'Daha az gor' : '+' + (brands.length - BRAND_LIMIT) + ' marka daha' }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <div class="fp-section">
+    <button class="fp-sec-hd" type="button" (click)="toggleSection('rating')">
+      <span>Musteri Puani</span>
+      <span class="fp-caret" [class.open]="!isCollapsed('rating')">›</span>
+    </button>
+    @if (!isCollapsed('rating')) {
+      <div class="fp-sec-body">
+        @for (rating of ratingOptions; track rating) {
+          <label class="fp-check-row fp-rating-row" [class.active]="activeFilters.ratings.includes(rating)">
+            <input
+              type="checkbox"
+              class="fp-check"
+              [checked]="activeFilters.ratings.includes(rating)"
+              (change)="toggleRating(rating)"
+            />
+            <span class="fp-check-mark"></span>
+            <span class="fp-stars">
+              @for (index of [1, 2, 3, 4, 5]; track index) {
+                <span [class.filled]="index <= rating">★</span>
+              }
+            </span>
+            <span class="fp-rating-label">ve uzeri</span>
+          </label>
+        }
+      </div>
+    }
+  </div>
+
+  @if (badges.length > 0) {
+    <div class="fp-section">
+      <button class="fp-sec-hd" type="button" (click)="toggleSection('badge')">
+        <span>Kampanya</span>
+        <span class="fp-caret" [class.open]="!isCollapsed('badge')">›</span>
+      </button>
+      @if (!isCollapsed('badge')) {
+        <div class="fp-sec-body">
+          @for (badge of badges; track trackByName($index, badge)) {
+            <label class="fp-check-row" [class.active]="activeFilters.badges.includes(badge.name)">
+              <input
+                type="checkbox"
+                class="fp-check"
+                [checked]="activeFilters.badges.includes(badge.name)"
+                (change)="toggleBadge(badge.name)"
+              />
+              <span class="fp-check-mark"></span>
+              <span class="fp-check-label">
+                <span class="fp-badge-pill">{{ badge.name }}</span>
+              </span>
+              <span class="fp-check-count">{{ badge.count }}</span>
+            </label>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <div class="fp-section fp-section--last">
+    <button class="fp-sec-hd" type="button" (click)="toggleSection('stock')">
+      <span>Stok Durumu</span>
+      <span class="fp-caret" [class.open]="!isCollapsed('stock')">›</span>
+    </button>
+    @if (!isCollapsed('stock')) {
+      <div class="fp-sec-body">
+        <label class="fp-check-row fp-toggle-row" [class.active]="activeFilters.inStockOnly">
+          <span class="fp-check-label">Sadece stokta olanlar</span>
+          <button
+            class="fp-toggle"
+            type="button"
+            [class.on]="activeFilters.inStockOnly"
+            (click)="toggleStock()"
+            role="switch"
+            [attr.aria-checked]="activeFilters.inStockOnly"
+          >
+            <span class="fp-toggle-knob"></span>
+          </button>
+        </label>
+      </div>
+    }
+  </div>
+</aside>

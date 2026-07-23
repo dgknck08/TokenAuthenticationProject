@@ -1,0 +1,19 @@
+<section class="info-page">
+  <div class="info-shell">
+    <p class="info-eyebrow">Kurumsal</p>
+    <h1>Markalar</h1>
+    <p class="info-lead">
+      Dmusic seckisinde yer alan markalar performans, guvenilirlik ve uzun omurlu kullanim odagiyla secilir.
+    </p>
+
+    <div class="brand-list">
+      @for (brand of brands; track brand) {
+        <article class="brand-item">
+          <strong>{{ brand }}</strong>
+        </article>
+      }
+    </div>
+
+    <a routerLink="/" class="info-link">Ana sayfaya don</a>
+  </div>
+</section>

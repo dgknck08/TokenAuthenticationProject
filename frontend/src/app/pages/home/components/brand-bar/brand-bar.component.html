@@ -1,0 +1,22 @@
+<section class="brands" aria-label="Marka endeksi">
+  <div class="shell">
+    <ul class="brands__grid">
+      @for (brand of brands; track brand.short) {
+        <li class="brands__item">
+          <a
+            class="brand"
+            [routerLink]="['/magaza']"
+            [queryParams]="{ search: brand.short }"
+            [attr.aria-label]="brand.name + ' ürünlerini görüntüle'"
+          >
+            <div class="brand__content">
+              <span class="brand__name">{{ brand.short }}</span>
+              <span class="brand__cat">{{ brand.category }}</span>
+            </div>
+            <span class="brand__arrow" aria-hidden="true">→</span>
+          </a>
+        </li>
+      }
+    </ul>
+  </div>
+</section>

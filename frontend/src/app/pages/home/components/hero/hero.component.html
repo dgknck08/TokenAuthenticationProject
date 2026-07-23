@@ -1,0 +1,58 @@
+<section class="hero" aria-labelledby="hero-title">
+  <div class="hero__bg" aria-hidden="true">
+    <video
+      #heroVideo
+      class="hero__bg-video"
+      autoplay
+      muted
+      loop
+      playsinline
+      preload="auto"
+      poster="https://res.cloudinary.com/dbtoykeu4/image/upload/v1773230834/site_ctdmcp.webp"
+    >
+      <source src="https://res.cloudinary.com/dbtoykeu4/video/upload/v1782667596/home_gsuvxw.mp4" type="video/mp4" />
+    </video>
+    <div class="hero__overlay"></div>
+    <div class="hero__grain"></div>
+  </div>
+
+  <div class="shell hero__shell">
+    <div class="hero__content">
+      <span class="hero__eyebrow">
+        <span class="hero__eyebrow-rule"></span>
+        Yeni Sezon Seçkisi · '26
+      </span>
+
+      <h1 id="hero-title" class="hero__title">
+        Her büyük performans <br />
+        <span class="hero__title-italic">bir enstrümanla başlar.</span>
+      </h1>
+
+      <p class="hero__lead">
+        Gitardan stüdyo ekipmanına, buradaki her parçayı dinleyerek seçiyoruz.
+        Orijinal garanti ve aynı gün kargo bizde zaten standart — gerisi
+        çalmaya kalıyor.
+      </p>
+
+      <div class="hero__actions">
+        <a routerLink="/magaza" class="btn-pick" aria-label="Koleksiyonu keşfet">
+          <span class="btn-pick__ripple"></span>
+          <span class="btn-pick__ripple"></span>
+
+          <div class="btn-pick__content">
+            <span class="btn-pick__text">Keşfet</span>
+            <svg class="btn-pick__icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 18V5l12-2v13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="6.5" cy="18.5" r="2.5" fill="currentColor"/>
+              <circle cx="18.5" cy="15.5" r="2.5" fill="currentColor"/>
+            </svg>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero__scroll" aria-hidden="true">
+    <span class="hero__scroll-line"></span>
+  </div>
+</section>

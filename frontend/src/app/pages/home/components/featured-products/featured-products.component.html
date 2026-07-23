@@ -1,0 +1,43 @@
+<section class="block" aria-label="Editörün seçtikleri">
+  <div class="shell">
+    @switch (status()) {
+      @case ('loading') {
+        <div class="grid grid-cols-4 gap-x-8 gap-y-20 max-[1024px]:grid-cols-3 max-[768px]:grid-cols-2 max-[768px]:gap-x-5 max-[768px]:gap-y-12 max-[420px]:grid-cols-1" aria-busy="true" aria-label="Ürünler yükleniyor">
+          @for (item of skeletons; track $index) {
+            <div class="flex flex-col gap-4 bg-transparent">
+              <div class="skeleton aspect-[3/4] bg-[var(--bg-hover)]"></div>
+              <div class="flex flex-col gap-2">
+                <div class="skeleton h-3 bg-[var(--bg-hover)] w-[90%]"></div>
+                <div class="skeleton h-3 bg-[var(--bg-hover)] w-[45%]"></div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      @case ('error') {
+        <div class="flex flex-col items-center justify-center gap-4 p-20 text-center border border-[var(--border)] bg-[var(--panel)]" role="alert">
+          <h3 class="font-display text-24px font-light tracking-[-0.01em] text-[var(--text-primary)] m-0">Koleksiyona Şu An Ulaşamıyoruz</h3>
+          <p class="font-sans text-[13px] text-[var(--text-muted)] mb-2 max-w-[40ch]">Kısa bir aksaklık yaşıyoruz — birkaç saniye sonra tekrar deneyin.</p>
+          <button type="button" class="btn btn--ghost" (click)="retry()">Tekrar Dene</button>
+        </div>
+      }
+
+      @default {
+        @if (products().length > 0) {
+          <div class="grid grid-cols-4 gap-x-8 gap-y-20 max-[1024px]:grid-cols-3 max-[768px]:grid-cols-2 max-[768px]:gap-x-5 max-[768px]:gap-y-12 max-[420px]:grid-cols-1">
+            @for (product of products(); track product.id) {
+              <app-product-card [product]="product" class="featured__card-item" />
+            }
+          </div>
+        } @else {
+          <div class="flex flex-col items-center justify-center gap-4 p-20 text-center border border-[var(--border)] bg-[var(--panel)]">
+            <h3 class="font-display text-24px font-light tracking-[-0.01em] text-[var(--text-primary)] m-0">Raflar Şu An Boş</h3>
+            <p class="font-sans text-[13px] text-[var(--text-muted)] mb-2 max-w-[40ch]">Yeni parçalar geldiğinde ilk burada göreceksiniz.</p>
+            <a routerLink="/magaza" class="btn btn--primary">Mağazaya Dön</a>
+          </div>
+        }
+      }
+    }
+  </div>
+</section>

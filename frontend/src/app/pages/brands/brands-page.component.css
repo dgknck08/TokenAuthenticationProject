@@ -1,0 +1,126 @@
+.info-page {
+  padding: 136px 0 88px;
+}
+
+.info-shell {
+  width: min(100%, 1180px);
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.info-eyebrow {
+  margin: 0 0 14px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #c8401a;
+}
+
+.info-shell h1 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(40px, 5vw, 72px);
+  font-weight: 900;
+  line-height: .96;
+  letter-spacing: -.04em;
+  color: #141210;
+}
+
+.info-lead {
+  margin: 18px 0 0;
+  max-width: 680px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 17px;
+  line-height: 1.75;
+  color: #4c4640;
+}
+
+.brand-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 42px;
+}
+
+.brand-item {
+  min-height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  border: 1px solid #d8d5cf;
+  background: #f7f5f1;
+}
+
+.brand-item strong {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 24px;
+  font-weight: 900;
+  font-style: italic;
+  color: #141210;
+}
+
+.info-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  margin-top: 32px;
+  padding: 0 18px;
+  border: 1px solid #141210;
+  color: #141210;
+  text-decoration: none;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.info-link:hover {
+  background: rgba(200, 64, 26, .08);
+}
+
+:host-context(.dark-theme) .info-shell h1,
+:host-context(.dark-theme) .brand-item strong,
+:host-context(.dark-theme) .info-link {
+  color: #e6e0d7;
+}
+
+:host-context(.dark-theme) .info-lead {
+  color: #bdb5aa;
+}
+
+:host-context(.dark-theme) .brand-item {
+  background: #24211e;
+  border-color: #3a3530;
+}
+
+:host-context(.dark-theme) .info-link {
+  border-color: #ddd6cc;
+}
+
+:host-context(.dark-theme) .info-link:hover {
+  background: rgba(224, 85, 34, .12);
+}
+
+@media (max-width: 900px) {
+  .brand-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .info-page {
+    padding: 112px 0 64px;
+  }
+
+  .info-shell {
+    padding: 0 12px;
+  }
+
+  .brand-list {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,32 @@
+@let item = product();
+
+<a
+  class="card"
+  [routerLink]="['/magaza']"
+  [queryParams]="{ category: item.category }"
+  [attr.aria-label]="item.brand + ' ' + item.name + ' — incele'"
+>
+  <div class="card__media">
+    @if (item.image) {
+      <img class="card__img" [src]="item.image" [alt]="item.name" loading="lazy" />
+    } @else {
+      <span class="card__ph">{{ item.brand }}</span>
+    }
+
+    @if (item.badge) {
+      <span class="card__badge" [class.card__badge--out]="!item.inStock">
+        {{ item.badge }}
+      </span>
+    }
+  </div>
+
+  <div class="card__body">
+    <span class="card__brand">{{ item.brand }}</span>
+    <h3 class="card__name">{{ item.name }}</h3>
+
+    <div class="card__foot">
+      <span class="card__price">₺{{ item.price | number: '1.0-0' }}</span>
+      <span class="card__cta" aria-hidden="true">İncele →</span>
+    </div>
+  </div>
+</a>

@@ -1,0 +1,38 @@
+<div class="magaza-page">
+  <div class="ph">
+    <span class="ph-title">Magaza</span>
+    <span class="ph-count">{{ filteredProducts().length }} urun</span>
+  </div>
+
+  @if (isLoading()) {
+    <div class="magaza-state">Urunler yukleniyor...</div>
+  } @else if (errorMessage()) {
+    <div class="magaza-state error">{{ errorMessage() }}</div>
+  } @else {
+    <div class="layout">
+      <app-filter-panel
+        [allProducts]="products()"
+        [activeFilters]="activeFilters"
+        (filtersChange)="updateFilters($event)"
+        (resetFilters)="resetFilters()"
+      />
+
+      <app-product-grid
+        [filteredCount]="filteredProducts().length"
+        [products]="pagedProducts()"
+        [sortBy]="sortBy"
+        [currentPage]="currentPage"
+        [pageSize]="pageSize"
+        [totalPages]="totalPages()"
+        [pageNumbers]="pageNumbers()"
+        (sortByChange)="updateSortBy($event)"
+        (productClick)="onProductClick($event)"
+        (addToCart)="addToCart($event.event, $event.product)"
+        (resetFilters)="resetFilters()"
+        (prevPage)="prevPage()"
+        (nextPage)="nextPage()" 
+        (goToPage)="goToPage($event)"
+      />
+    </div>
+  }
+</div>

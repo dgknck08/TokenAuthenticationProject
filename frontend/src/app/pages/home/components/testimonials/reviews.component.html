@@ -1,0 +1,72 @@
+<section
+  class="block"
+  aria-label="Sahneden sesler"
+  (mouseenter)="pause()"
+  (mouseleave)="resume()"
+  (focusin)="pause()"
+  (focusout)="resume()"
+>
+  <div class="shell">
+    @if (hasItems()) {
+      <div
+        class="rev"
+        role="group"
+        aria-roledescription="carousel"
+        [attr.aria-label]="(activeIndex() + 1) + ' / ' + count()"
+      >
+        <div class="rev__index" role="tablist" aria-label="Yorum seç">
+          @for (t of testimonials(); track t.id; let i = $index) {
+            <button
+              type="button"
+              class="rev__entry"
+              [class.rev__entry--active]="i === activeIndex()"
+              role="tab"
+              [attr.aria-selected]="i === activeIndex()"
+              [attr.aria-label]="(i + 1) + '. yorum — ' + t.name"
+              (click)="goTo(i)"
+            >
+              <span class="rev__entry-mark" aria-hidden="true"></span>
+              <span class="rev__entry-body">
+                <span class="rev__entry-name">{{ t.name }}</span>
+                <span class="rev__entry-role">{{ t.role || 'Dmusic Üyesi' }}</span>
+              </span>
+              <span class="rev__entry-line" aria-hidden="true"></span>
+            </button>
+          }
+        </div>
+
+        <div class="rev__stage" aria-live="polite">
+          @for (item of [active()!]; track item.id) {
+            <figure class="rev__quote">
+              <span class="rev__mark" aria-hidden="true">“</span>
+              <blockquote class="rev__text">{{ item.quote }}</blockquote>
+              <figcaption class="rev__caption">
+                <strong class="rev__name">{{ item.name }}</strong>
+                <span class="rev__sep" aria-hidden="true"></span>
+                <span class="rev__role">{{ item.role || 'Dmusic Üyesi' }}</span>
+              </figcaption>
+            </figure>
+          }
+
+          <div class="rev__foot">
+            <div class="rev__dots" aria-hidden="true">
+              @for (t of testimonials(); track t.id; let i = $index) {
+                <span class="rev__dot" [class.rev__dot--active]="i === activeIndex()"></span>
+              }
+            </div>
+
+            <div class="rev__nav">
+              <button type="button" class="rev__arrow" (click)="previous()" aria-label="Önceki yorum">←</button>
+              <button type="button" class="rev__arrow" (click)="next()" aria-label="Sonraki yorum">→</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="rev__empty">
+        <h3 class="rev__empty-title">Henüz Ses Yok</h3>
+        <p class="rev__empty-sub">İlk yorumlar geldiğinde burada olacak.</p>
+      </div>
+    }
+  </div>
+</section>

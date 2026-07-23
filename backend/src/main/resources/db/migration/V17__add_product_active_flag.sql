@@ -1,0 +1,12 @@
+ALTER TABLE product ADD COLUMN active BOOLEAN NOT NULL DEFAULT TRUE;
+
+CREATE INDEX idx_product_active ON product (active);
+
+UPDATE product
+SET active = FALSE
+WHERE sku IN (
+    'STRAT-CREAM-ELEC',
+    'ACOUSTIC-MATTE-BLACK',
+    'ACOUSTIC-SUNBURST',
+    'LP-VINTAGE-SUNBURST-ELEC'
+);

@@ -1,0 +1,73 @@
+<div class="parea">
+  <div class="sort-bar">
+    <span class="sort-left">{{ filteredCount }} sonuc</span>
+    <select class="sort-sel" [ngModel]="sortBy" (ngModelChange)="sortByChange.emit($event)">
+      <option value="default">Onerilen</option>
+      <option value="price-asc">Fiyat: Dusukten Yuksege</option>
+      <option value="price-desc">Fiyat: Yuksekten Dusuge</option>
+      <option value="newest">En Yeni</option>
+    </select>
+  </div>
+
+  @if (filteredCount > 0) {
+    <div class="pgrid">
+      @for (product of products; track product.slug) {
+        <article
+          class="pc"
+          tabindex="0"
+          (click)="productClick.emit(product)"
+          (keydown.enter)="productClick.emit(product)"
+          [attr.aria-label]="product.name"
+        >
+          <div class="pc-img">
+            @if (product.image) {
+              <img [src]="product.image" [alt]="product.name" />
+            } @else {
+              <span class="pc-img-ph">{{ product.brand }}</span>
+            }
+            @if (product.badge) {
+              <span class="pc-badge">{{ product.badge }}</span>
+            }
+          </div>
+
+          <div class="pc-body">
+            <span class="pc-brand">{{ product.brand }}</span>
+            <span class="pc-name">{{ product.name }}</span>
+            <span class="pc-desc">{{ product.description }}</span>
+          </div>
+
+          <div class="pc-foot">
+            <div class="pc-prices">
+              <span class="pc-price">₺{{ product.price | number }}</span>
+              @if (product.oldPrice) {
+                <span class="pc-price-old">₺{{ product.oldPrice | number }}</span>
+              }
+            </div>
+            <button class="pc-add" type="button" (click)="addToCart.emit({ event: $event, product })" aria-label="Sepete ekle">
+              + Sepet
+            </button>
+          </div>
+        </article>
+      }
+    </div>
+  } @else {
+    <div class="no-result">
+      <p class="no-result-title">Sonuc bulunamadi.</p>
+      <p class="no-result-sub">Farkli filtreler deneyin.</p>
+      <button class="sb-reset" (click)="resetFilters.emit()">Filtreleri Temizle</button>
+    </div>
+  }
+
+  <div class="pag">
+    <span class="pag-info">
+      {{ (currentPage - 1) * pageSize + 1 }} - {{ min(currentPage * pageSize, filteredCount) }} / {{ filteredCount }} urun
+    </span>
+    <div class="pag-btns">
+      <button class="pag-btn" (click)="prevPage.emit()" [disabled]="currentPage === 1">←</button>
+      @for (p of pageNumbers; track p) {
+        <button class="pag-btn" [class.on]="p === currentPage" (click)="goToPage.emit(p)">{{ p }}</button>
+      }
+      <button class="pag-btn" (click)="nextPage.emit()" [disabled]="currentPage === totalPages">→</button>
+    </div>
+  </div>
+</div>
