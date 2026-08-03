@@ -1,57 +1,54 @@
-<header class="navbar-shell">
-  <div class="navbar-inner">
-    <div class="navbar">
-      <div class="navbar-left">
-        <a class="brand" href="/" aria-label="Dmusic ana sayfa">
-          <img
-            class="brand-logo"
-            [src]="logoUrl()"
-            alt="Dmusic"
-          />
-        </a>
+<header
+  class="site-nav fixed top-0 left-0 z-[100] w-full"
+  [class.site-nav--solid]="isSolid()"
+  [class.site-nav--hidden]="isHidden()"
+>
+  <div class="max-w-[var(--shell-max)] mx-auto px-10 max-[960px]:px-6">
+    <div class="site-nav__bar">
 
-        <nav class="nav-links">
-          <button type="button" class="nav-link">Urunlerimiz</button>
-          <button type="button" class="nav-link">Kampanyalar</button>
-          <button type="button" class="nav-link">Hakkimizda</button>
-        </nav>
-      </div>
+      <a class="site-nav__brand" href="/" aria-label="Dmusic ana sayfa">Dmusic</a>
 
-      <div class="navbar-right">
+      <nav class="site-nav__links" aria-label="Ana menü">
+        <button type="button" class="site-nav__link" (click)="goToStore()">Koleksiyon</button>
+        <button type="button" class="site-nav__link">Kampanyalar</button>
+        <button type="button" class="site-nav__link" (click)="goToAbout()">Hakkımızda</button>
+      </nav>
+
+      <div class="site-nav__actions">
+        
         <button
           type="button"
-          class="icon-btn theme-btn"
+          class="relative flex items-center justify-center w-9 h-9 border-none bg-transparent text-[var(--text-primary)] cursor-pointer transition-colors duration-300 hover:text-[var(--text-muted)]"
           (click)="toggleTheme()"
           [attr.aria-label]="isDarkMode() ? 'Aydinlik moda gec' : 'Karanlik moda gec'"
           [attr.title]="isDarkMode() ? 'Aydinlik' : 'Karanlik'"
         >
-          <span class="icon-wrap">
+          <span class="flex items-center justify-center">
             @if (isDarkMode()) {
-              <svg viewBox="0 0 24 24" width="18" height="18">
+              <svg viewBox="0 0 24 24" width="16" height="16">
                 <path
                   d="M6.76 4.84 5.34 3.42 3.93 4.84l1.41 1.41Zm10.48 0 1.41 1.41 1.42-1.41-1.42-1.42ZM12 5a1 1 0 0 0 1-1V2h-2v2a1 1 0 0 0 1 1Zm7 8h2v-2h-2Zm-7 6a1 1 0 0 0-1 1v2h2v-2a1 1 0 0 0-1-1Zm-8-6H2v2h2Zm2.34 6.66-1.41 1.41 1.41 1.42 1.42-1.42Zm12.73 1.41 1.42 1.42 1.41-1.42-1.41-1.41ZM12 7a5 5 0 1 0 5 5 5 5 0 0 0-5-5Z"
                   fill="currentColor"
                 />
               </svg>
             } @else {
-              <svg viewBox="0 0 24 24" width="18" height="18">
+              <svg viewBox="0 0 24 24" width="16" height="16">
                 <path d="M20 14.69A8 8 0 0 1 9.31 4 8 8 0 1 0 20 14.69Z" fill="currentColor" />
               </svg>
             }
           </span>
         </button>
 
-        <div class="cart-menu">
+        <div class="relative">
           <button
             type="button"
-            class="icon-btn cart-btn"
-            [class.active]="isCartOpen() || isCartActive()"
+            class="relative flex items-center justify-center w-9 h-9 border-none bg-transparent text-[var(--text-primary)] cursor-pointer transition-colors duration-300 hover:text-[var(--text-muted)]"
             (click)="toggleCart()"
             aria-label="Sepet"
             title="Sepet"
           >
-            <span class="icon-wrap">
-              <svg viewBox="0 0 24 24" width="18" height="18">
+            <span class="flex items-center justify-center">
+              <svg viewBox="0 0 24 24" width="16" height="16">
                 <path
                   d="M3 4h2.2c.32 0 .6.22.67.53L6.3 7H20a1 1 0 0 1 .97 1.24l-1.4 5.4A2 2 0 0 1 17.63 15H9a2 2 0 0 1-1.94-1.53L5.1 5H3V4Zm6 13a1.75 1.75 0 1 1 0 3.5A1.75 1.75 0 0 1 9 17Zm8 0a1.75 1.75 0 1 1 0 3.5A1.75 1.75 0 0 1 17 17Z"
                   fill="currentColor"
@@ -59,57 +56,57 @@
               </svg>
             </span>
             @if (cartCount() > 0) {
-              <span class="badge cart-badge"></span>
+              <span class="absolute top-0 right-0 flex items-center justify-center min-w-[15px] h-[15px] px-1 bg-[var(--text-primary)] text-[var(--bg-shell)] font-sans text-[8px] font-semibold rounded-none">{{ cartCount() }}</span>
             }
           </button>
 
           @if (isCartOpen()) {
-            <div class="cart-dropdown">
-              <div class="cart-dropdown-header">
+            <div class="absolute top-[calc(100%+18px)] right-0 w-[380px] bg-[var(--bg-shell)] border border-[var(--border)] p-6 z-[110] animate-[dropdownFadeIn_0.22s_cubic-bezier(0.25,1,0.5,1)] max-[560px]:fixed max-[560px]:top-[64px] max-[560px]:left-0 max-[560px]:w-full max-[560px]:border-x-none">
+              <div class="flex items-baseline justify-between border-b border-[var(--border)] pb-4 mb-4">
                 <div>
-                  <span class="cart-title">Sepetim</span>
-                  <span class="cart-subtitle">{{ cartCount() }} urun</span>
+                  <span class="font-display text-lg font-normal text-[var(--text-primary)]">Alışveriş Çantası</span>
+                  <span class="font-sans text-[11px] text-[var(--text-muted)] ml-2 uppercase">{{ cartCount() }} adet parça</span>
                 </div>
-                <button type="button" class="cart-link-btn" (click)="goToCartPage()">Tumunu Gor</button>
+                <button type="button" class="bg-transparent border-none font-sans text-[11px] uppercase tracking-[0.12em] color-[var(--text-primary)] border-b border-[var(--text-primary)] pb-0.5 cursor-pointer" (click)="goToCartPage()">Detaylar</button>
               </div>
 
               @if (isCartLoading()) {
-                <div class="cart-state">Sepet yukleniyor...</div>
+                <div class="py-8 text-center font-sans text-sm text-[var(--text-muted)]">Güncelleniyor...</div>
               } @else if (cartErrorMessage()) {
-                <div class="cart-state error">{{ cartErrorMessage() }}</div>
+                <div class="py-8 text-center font-sans text-sm text-[var(--danger)]">{{ cartErrorMessage() }}</div>
               } @else if (!cart()?.items?.length) {
-                <div class="cart-state empty">
-                  <strong>Sepetin bos</strong>
-                  <span>Urun eklediginde burada gorunecek.</span>
+                <div class="flex flex-col gap-1 py-8 text-center font-sans text-[13px] text-[var(--text-muted)]">
+                  <strong class="text-[var(--text-primary)] font-semibold">Çantanız Boş</strong>
+                  <span>Koleksiyondan ürün eklediğinizde burada listelenecektir.</span>
                 </div>
               } @else {
-                <div class="cart-preview-list">
+                <div class="flex flex-col gap-4 max-h-[240px] overflow-y-auto">
                   @for (item of cart()?.items ?? []; track item.productId) {
-                    <article class="cart-preview-item">
-                      <div class="cart-preview-thumb">
+                    <article class="grid grid-cols-[48px_1fr_auto] items-center gap-4 pb-3 border-b border-dashed border-[var(--border)]">
+                      <div class="w-12 h-[60px] bg-[var(--bg-hover)] flex items-center justify-center overflow-hidden">
                         @if (item.productImage) {
-                          <img [src]="item.productImage" [alt]="item.productName" />
+                          <img class="w-full h-full object-cover" [src]="item.productImage" [alt]="item.productName" />
                         } @else {
-                          <span>{{ item.productName.charAt(0) }}</span>
+                          <span class="font-display text-lg">{{ item.productName.charAt(0) }}</span>
                         }
                       </div>
 
-                      <div class="cart-preview-copy">
-                        <strong>{{ item.productName }}</strong>
-                        <span>{{ item.quantity }} adet</span>
+                      <div class="flex flex-col gap-1">
+                        <strong class="font-sans text-xs font-medium text-[var(--text-primary)] leading-normal">{{ item.productName }}</strong>
+                        <span class="font-sans text-[10px] text-[var(--text-muted)]">Adet: {{ item.quantity }}</span>
                       </div>
 
-                      <span class="cart-preview-price">{{ item.totalPrice | currency:'TRY':'symbol':'1.2-2' }}</span>
+                      <span class="font-sans text-xs font-semibold text-[var(--text-primary)]">{{ item.totalPrice | currency:'TRY':'symbol':'1.2-2' }}</span>
                     </article>
                   }
                 </div>
 
-                <div class="cart-dropdown-footer">
-                  <div class="cart-total">
-                    <span>Toplam</span>
-                    <strong>{{ cart()?.totalAmount | currency:'TRY':'symbol':'1.2-2' }}</strong>
+                <div class="border-t border-[var(--border)] mt-4 pt-4 flex flex-col gap-4">
+                  <div class="flex justify-between items-baseline">
+                    <span class="font-sans text-[11px] tracking-widest text-[var(--text-muted)]">TOPLAM ARA TOPLAM</span>
+                    <strong class="font-sans text-base font-semibold">{{ cart()?.totalAmount | currency:'TRY':'symbol':'1.2-2' }}</strong>
                   </div>
-                  <button type="button" class="cart-cta" (click)="goToCartPage()">Sepete Git</button>
+                  <button type="button" class="w-full h-12 bg-[var(--text-primary)] text-[var(--bg-shell)] font-sans text-[11px] font-medium tracking-[0.18em] uppercase border border-[var(--text-primary)] cursor-pointer transition-all duration-300 hover:bg-transparent hover:text-[var(--text-primary)]" (click)="goToCartPage()">Siparişi Tamamla</button>
                 </div>
               }
             </div>
@@ -118,83 +115,64 @@
 
         <button
           type="button"
-          class="icon-btn fav-btn"
-          [class.active]="isFavoriteMode()"
+          class="relative flex items-center justify-center w-9 h-9 border-none bg-transparent text-[var(--text-primary)] cursor-pointer transition-colors duration-300 hover:text-[var(--text-muted)]"
+          [class.text-[var(--danger)]]="isFavoriteMode()"
           (click)="toggleFavorites()"
           aria-label="Favoriler"
           title="Favoriler"
         >
-          <span class="icon-wrap">
-            <svg viewBox="0 0 24 24" width="18" height="18">
+          <span class="flex items-center justify-center">
+            <svg viewBox="0 0 24 24" width="16" height="16">
               <path
                 d="m12 21-1.45-1.32C5.4 15.02 2 11.93 2 8.15A4.89 4.89 0 0 1 6.95 3 5.4 5.4 0 0 1 12 5.34 5.4 5.4 0 0 1 17.05 3 4.89 4.89 0 0 1 22 8.15c0 3.78-3.4 6.87-8.55 11.54Z"
                 fill="currentColor"
               />
             </svg>
           </span>
-          @if (isFavoriteMode()) {
-            <span class="badge"></span>
-          }
         </button>
 
-        <div class="divider"></div>
+        <div class="w-[1px] h-4 bg-[var(--border)] mx-1 max-[680px]:hidden"></div>
 
         @if (!isLoggedIn()) {
-          <div class="auth-actions">
-            <button type="button" class="auth-btn register-btn" (click)="register()">
-              <svg viewBox="0 0 24 24" width="16" height="16">
-                <path
-                  d="M15 12a4 4 0 1 0-3.99-4A4 4 0 0 0 15 12Zm-6 0a3 3 0 1 0-3-3 3 3 0 0 0 3 3Zm6.15 2c-2.66 0-7.15 1.34-7.15 4v1h14v-1c0-2.66-4.49-4-6.85-4ZM9 14c-.34 0-.7.02-1.07.05C6.01 14.23 3 15.18 3 17v2h4v-1c0-1.53.8-2.82 2.18-3.73A7.3 7.3 0 0 0 9 14Z"
-                  fill="currentColor"
-                />
-              </svg>
-              <span>Kayit Ol</span>
-            </button>
-
-            <button type="button" class="auth-btn login-btn" (click)="login()">
-              <svg viewBox="0 0 24 24" width="16" height="16">
-                <path
-                  d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-4.42 0-8 2.01-8 4.5V21h16v-2.5c0-2.49-3.58-4.5-8-4.5Z"
-                  fill="currentColor"
-                />
-              </svg>
-              <span>Giris Yap</span>
-            </button>
+          <div class="site-nav__auth">
+            <button type="button" class="site-nav__auth-link" (click)="register()">Kayıt Ol</button>
+            <button type="button" class="site-nav__auth-link site-nav__auth-link--primary" (click)="login()">Giriş Yap</button>
           </div>
         } @else {
-          <div class="user-menu">
-            <button type="button" class="avatar-btn" (click)="toggleUserMenu()">
-              <span class="avatar-initials">DM</span>
-              <svg class="chevron" [class.open]="isUserMenuOpen()" viewBox="0 0 24 24" width="14" height="14">
+          <div class="relative">
+            <button type="button" class="flex items-center gap-2 p-1 bg-transparent border-none cursor-pointer" (click)="toggleUserMenu()">
+              <span class="flex items-center justify-center width-7 height-7 w-7 h-7 bg-[var(--text-primary)] text-[var(--bg-shell)] font-sans text-[10px] font-semibold rounded-none">DM</span>
+              <svg class="text-[var(--text-muted)] transition-transform duration-300" [class.rotate-180]="isUserMenuOpen()" viewBox="0 0 24 24" width="12" height="12">
                 <path d="M7 10l5 5 5-5Z" fill="currentColor" />
               </svg>
             </button>
 
             @if (isUserMenuOpen()) {
-              <div class="dropdown">
-                <div class="dropdown-header">
-                  <span class="dropdown-name">{{ currentUser()?.username ?? 'Kullanici' }}</span>
-                  <span class="dropdown-email">{{ currentUser()?.email ?? 'user@dmusic.com' }}</span>
+              <div class="absolute top-[calc(100%+18px)] right-0 min-w-[220px] bg-[var(--bg-shell)] border border-[var(--border)] p-3 z-[110] animate-[dropdownFadeIn_0.22s_cubic-bezier(0.25,1,0.5,1)]">
+                <div class="flex flex-col px-3 py-2">
+                  <span class="font-sans text-[13px] font-semibold text-[var(--text-primary)]">{{ currentUser()?.username ?? 'Kullanıcı' }}</span>
+                  <span class="font-sans text-[11px] text-[var(--text-muted)] mt-0.5">{{ currentUser()?.email ?? 'user@dmusic.com' }}</span>
                 </div>
-                <hr class="dropdown-divider" />
-                <button class="dropdown-item" type="button">Profilim</button>
-                <button class="dropdown-item" type="button">Siparislerim</button>
-                <button class="dropdown-item" type="button">Ayarlar</button>
-                <hr class="dropdown-divider" />
-                <button class="dropdown-item danger" type="button" (click)="logout()">
-                  <svg viewBox="0 0 24 24" width="15" height="15">
+                <hr class="border-none border-t border-[var(--border)] my-2" />
+                <button class="flex items-center gap-2 w-full px-3 py-2 border-none bg-transparent font-sans text-xs text-[var(--text-secondary)] cursor-pointer text-left transition-colors duration-300 hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]" type="button">Hesabım</button>
+                <button class="flex items-center gap-2 w-full px-3 py-2 border-none bg-transparent font-sans text-xs text-[var(--text-secondary)] cursor-pointer text-left transition-colors duration-300 hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]" type="button">Siparişlerim</button>
+                <button class="flex items-center gap-2 w-full px-3 py-2 border-none bg-transparent font-sans text-xs text-[var(--text-secondary)] cursor-pointer text-left transition-colors duration-300 hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]" type="button">Ayarlar</button>
+                <hr class="border-none border-t border-[var(--border)] my-2" />
+                <button class="flex items-center gap-2 w-full px-3 py-2 border-none bg-transparent font-sans text-xs text-[var(--danger)] cursor-pointer text-left transition-colors duration-300 hover:bg-[var(--danger-soft)]" type="button" (click)="logout()">
+                  <svg viewBox="0 0 24 24" width="14" height="14" class="mr-1">
                     <path
                       d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4v-2H6V6h4Zm6.59 3.59L15.17 9l2.59 2H9v2h8.76l-2.59 2 1.42 1.41L21.59 12Z"
                       fill="currentColor"
                     />
                   </svg>
-                  Cikis Yap
+                  Çıkış Yap
                 </button>
               </div>
             }
           </div>
         }
       </div>
+
     </div>
   </div>
 </header>

@@ -1,6 +1,81 @@
-<section class="home-page">
-  <div class="home-shell">
-    <app-shipping-banner />
-    <app-category-showcase />
-  </div>
-</section>
+<div class="home">
+  <app-hero />
+
+  <section class="home__band" aria-labelledby="featured-heading">
+    <div class="shell">
+      <div class="editorial-header" data-reveal>
+        <span class="editorial-header__mark" aria-hidden="true"></span>
+        <div class="editorial-header__body">
+          <span class="editorial-header__tag">Kürasyon</span>
+          <div class="editorial-header__row">
+            <h2 id="featured-heading" class="editorial-header__title">Editörün Seçtikleri</h2>
+            <a routerLink="/magaza" class="editorial-header__link">Tümünü İncele</a>
+          </div>
+          <p class="editorial-header__sub">
+            Elimize alıp çaldığımızda "evet, bu" dediğimiz enstrümanlar.
+            Sayıları az; her biri atölyemizden tek tek geçti.
+          </p>
+        </div>
+      </div>
+      @defer (on viewport) {
+        <app-featured-products />
+      } @placeholder (minimum 200ms) {
+        <div class="home__defer" aria-hidden="true"></div>
+      }
+    </div>
+  </section>
+
+  <section class="home__band home__band--subtle" aria-labelledby="collections-heading">
+    <div class="shell">
+      <div class="editorial-header editorial-header--flip" data-reveal>
+        <span class="editorial-header__mark" aria-hidden="true"></span>
+        <div class="editorial-header__body">
+          <span class="editorial-header__tag">Koleksiyonlar</span>
+          <h2 id="collections-heading" class="editorial-header__title">Kendi Sesini Bul</h2>
+          <p class="editorial-header__sub">
+            Kimi sahnede çalıyor, kimi gece yarısı kayıt alıyor. Hangi ses
+            sizinkiyse, oradan başlayın.
+          </p>
+        </div>
+      </div>
+      <app-category-showcase data-reveal />
+    </div>
+  </section>
+
+  <section class="home__band" aria-labelledby="brands-heading">
+    <div class="shell">
+      <div class="editorial-header" data-reveal>
+        <span class="editorial-header__mark" aria-hidden="true"></span>
+        <div class="editorial-header__body">
+          <span class="editorial-header__tag">Marka Endeksi</span>
+          <div class="editorial-header__row">
+            <h2 id="brands-heading" class="editorial-header__title">Efsanelerle Aynı Sahnede</h2>
+            <a routerLink="/markalar" class="editorial-header__link">Tüm Markaları Gör</a>
+          </div>
+          <p class="editorial-header__sub">
+            Fender'dan Neumann'a, yıllardır aynı markalarla çalışıyoruz.
+            Hepsi orijinal, hepsi garantili — bu konuda esnemeyiz.
+          </p>
+        </div>
+      </div>
+      <app-brand-bar data-reveal />
+    </div>
+  </section>
+
+  <section class="home__band home__band--subtle" aria-labelledby="reviews-heading">
+    <div class="shell">
+      <div class="editorial-header editorial-header--flip" data-reveal>
+        <span class="editorial-header__mark" aria-hidden="true"></span>
+        <div class="editorial-header__body">
+          <span class="editorial-header__tag">Sahne Arkası</span>
+          <h2 id="reviews-heading" class="editorial-header__title">Sahneden Sesler</h2>
+          <p class="editorial-header__sub">
+            İlk provasını, ilk kaydını, ilk konserini bizden aldığı enstrümanla
+            veren müzisyenler anlatıyor.
+          </p>
+        </div>
+      </div>
+      <app-reviews data-reveal />
+    </div>
+  </section>
+</div>

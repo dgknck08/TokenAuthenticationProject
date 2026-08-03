@@ -1,53 +1,47 @@
-import { Component } from '@angular/core';
-import { Router } from '@angular/router';
-
-export type AccentVariant = 'primary' | 'warm' | 'soft';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 export interface Category {
-  title: string;
-  subtitle: string;
-  description: string;
-  accent: AccentVariant;
-  slug: string;
+  readonly title: string;
+  readonly subtitle: string;
+  readonly description: string;
+  readonly query: string;
+  readonly tone: 'amber' | 'violet' | 'teal';
 }
 
 @Component({
   selector: 'app-category-showcase',
+  standalone: true,
+  imports: [RouterLink],
   templateUrl: './category-showcase.component.html',
-  styleUrls: ['./category-showcase.component.css'],
+  styleUrl: './category-showcase.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CategoryShowcaseComponent {
-
-  readonly categories: Category[] = [
+  protected readonly categories: readonly Category[] = [
     {
-      title: 'Gitarlar &\nTeller',
-      subtitle: 'Akustik Gitar · Elektro Gitar · Bass Gitar',
+      title: 'Gitarlar & Teller',
+      subtitle: 'Akustik · Elektro · Bas',
       description:
-        'Yeni başlayanlar için entry-level modellerden profesyonel sahne gitarlarına uzanan geniş yelpaze.',
-      accent: 'primary',
-      slug: 'gitarlar',
+        'İlk gitarınız da olabilir, sahnedeki beşinciniz de — ikisini de aynı ciddiyetle seçiyoruz.',
+      query: 'gitar',
+      tone: 'amber',
     },
     {
-      title: 'Davul &\nPerküsyon',
-      subtitle: 'Akustik Davul · Elektronik Davul · Pad',
+      title: 'Davul & Perküsyon',
+      subtitle: 'Akustik · Elektronik · Pad',
       description:
-        'Akustik setlerden elektronik davullara, ritim dünyasına adım atın ya da sahnede daha güçlü vurun.',
-      accent: 'warm',
-      slug: 'davul',
+        'İlk baget tutuştan turne setine; ritmin her hâli burada.',
+      query: 'davul',
+      tone: 'violet',
     },
     {
-      title: 'Stüdyo &\nSes \n',
-      subtitle: 'Mikrofon · Interface · Monitör',
+      title: 'Stüdyo & Ses',
+      subtitle: 'Mikrofon · Arabirim · Monitör',
       description:
-        'Ev stüdyonuzdan profesyonel kayıt ortamına — ses kalitesinden ödün vermeden üretmeye devam edin.',
-      accent: 'soft',
-      slug: 'studyo',
+        'Yatak odası stüdyosu da olsa kayıt kayıttır. Ses kalitesinden vazgeçmeyin.',
+      query: 'stüdyo',
+      tone: 'teal',
     },
   ];
-
-  constructor(private router: Router) {}
-
-  onCategoryClick(category: Category): void {
-    this.router.navigate(['/kategoriler', category.slug]);
-  }
 }

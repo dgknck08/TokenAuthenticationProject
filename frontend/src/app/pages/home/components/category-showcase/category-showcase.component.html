@@ -1,35 +1,27 @@
-<section class="category-showcase" aria-label="Ürün kategorileri">
+<section class="block" aria-label="Koleksiyonlar">
+  <div class="shell">
+    <div class="grid grid-cols-3 border-t border-l border-[var(--border)] max-[1024px]:grid-cols-1 max-[1024px]:border-l-0">
+      @for (category of categories; track category.query) {
+        <a
+          class="relative flex flex-col justify-between min-h-[420px] p-12 bg-[var(--bg-page)] border-r border-b border-[var(--border)] no-underline transition-colors duration-500 hover:bg-[var(--bg-hover)] focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--text-primary)] focus-visible:-outline-offset-1 max-[1024px]:min-h-[300px] max-[1024px]:p-8 max-[1024px]:border-l max-[1024px]:border-[var(--border)]"
+          [routerLink]="['/magaza']"
+          [queryParams]="{ search: category.query }"
+          [attr.aria-label]="category.title + ' ürünlerini görüntüle'"
+        >
+          <span class="block w-px h-7 bg-[var(--border-strong)]" aria-hidden="true"></span>
 
-  <div class="section-head">
-    <div>
-      <p class="eyebrow">Kategoriler</p>
-      <h2>Tarzına ve<br>ihtiyacına göre<br>hızlı seçim yap</h2>
+          <div class="flex flex-col mt-10">
+            <span class="font-sans text-[10px] font-medium tracking-[0.15em] uppercase text-[var(--text-muted)]">{{ category.subtitle }}</span>
+            <h3 class="font-display text-[clamp(26px,2.4vw,34px)] font-light leading-[1.08] tracking-[-0.03em] text-[var(--text-primary)] mt-3">{{ category.title }}</h3>
+            <p class="font-sans text-[13px] font-light leading-relaxed text-[var(--text-secondary)] mt-[14px] max-w-[32ch]">{{ category.description }}</p>
+          </div>
+
+          <span class="group inline-flex items-center gap-2 mt-10 font-sans text-[11px] font-medium tracking-[0.15em] uppercase text-[var(--text-primary)]">
+            Koleksiyonu İncele
+            <span class="inline-block transition-transform duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:translate-x-1.5" aria-hidden="true">→</span>
+          </span>
+        </a>
+      }
     </div>
   </div>
-
-  <div class="category-grid">
-    @for (category of categories; track category.title) {
-      <article
-        class="category-card"
-        [class.primary]="category.accent === 'primary'"
-        [class.warm]="category.accent === 'warm'"
-        [class.soft]="category.accent === 'soft'"
-        (click)="onCategoryClick(category)"
-        role="button"
-        tabindex="0"
-        [attr.aria-label]="category.title + ' kategorisini keşfet'"
-      >
-        <div class="card-glow" aria-hidden="true"></div>
-        <h3>{{ category.title }}</h3>
-        <p class="card-subtitle">{{ category.subtitle }}</p>
-        <p class="card-description">{{ category.description }}</p>
-
-        <div class="card-foot">
-          <span>Keşfetmeye başla</span>
-          <span class="arrow" aria-hidden="true">+</span>
-        </div>
-      </article>
-    }
-  </div>
-
 </section>

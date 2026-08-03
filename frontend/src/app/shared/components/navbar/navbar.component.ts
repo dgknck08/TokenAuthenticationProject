@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule, CurrencyPipe } from '@angular/common';
-import { Router } from '@angular/router';
+import { NavigationEnd, Router } from '@angular/router';
+import { filter } from 'rxjs';
 import { AuthService } from '../../../core/auth.service';
 import { CartService } from '../../../core/cart.service';
 import { ThemeService } from '../../../core/theme.service';
@@ -14,8 +16,6 @@ import { ThemeService } from '../../../core/theme.service';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NavbarComponent {
-  private static readonly LOGO_URL = 'https://res.cloudinary.com/dbtoykeu4/image/upload/v1773243243/dmusiclatest_glclqd.svg';
-
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
   private readonly cartService = inject(CartService);
@@ -32,7 +32,14 @@ export class NavbarComponent {
   readonly cart = this.cartService.cart;
   readonly cartCount = this.cartService.totalItems;
   readonly isCartActive = computed(() => this.router.url.startsWith('/cart'));
-  readonly logoUrl = computed(() => NavbarComponent.LOGO_URL);
+
+  private readonly isHome = signal(false);
+  private readonly scrolled = signal(false);
+
+  readonly isHidden = computed(() => this.isHome() && !this.scrolled());
+  readonly isSolid = computed(() => !this.isHome() || this.scrolled());
+
+  private scrollTicking = false;
 
   constructor() {
     this.cartService.loadCart().subscribe({
@@ -40,6 +47,39 @@ export class NavbarComponent {
         this.cartService.resetCart();
       }
     });
+
+    this.isHome.set(this.isHomeUrl(this.router.url));
+    this.scrolled.set(this.isPastThreshold());
+
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        takeUntilDestroyed()
+      )
+      .subscribe((event) => {
+        this.isHome.set(this.isHomeUrl(event.urlAfterRedirects));
+      });
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    if (this.scrollTicking) {
+      return;
+    }
+    this.scrollTicking = true;
+    requestAnimationFrame(() => {
+      this.scrolled.set(this.isPastThreshold());
+      this.scrollTicking = false;
+    });
+  }
+
+  private isHomeUrl(url: string): boolean {
+    const path = url.split('?')[0].split('#')[0];
+    return path === '/' || path === '';
+  }
+
+  private isPastThreshold(): boolean {
+    return window.scrollY > window.innerHeight * 0.8;
   }
 
   toggleTheme(): void {
@@ -63,6 +103,18 @@ export class NavbarComponent {
   goToCartPage(): void {
     this.isCartOpen.set(false);
     this.router.navigateByUrl('/cart');
+  }
+
+  goToStore(): void {
+    this.isCartOpen.set(false);
+    this.isUserMenuOpen.set(false);
+    this.router.navigateByUrl('/magaza');
+  }
+
+  goToAbout(): void {
+    this.isCartOpen.set(false);
+    this.isUserMenuOpen.set(false);
+    this.router.navigateByUrl('/hakkimizda');
   }
 
   toggleUserMenu(): void {
