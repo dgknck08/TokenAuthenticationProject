@@ -87,7 +87,7 @@ class JwtTokenProviderTest {
         when(claims.getSubject()).thenReturn("authUser");
         when(claims.get("roles")).thenReturn(List.of("ROLE_USER"));
 
-        when(jwtClaimsCache.getIfPresent("token")).thenReturn(claims);
+        when(jwtClaimsCache.getIfPresent(anyString())).thenReturn(claims);
         when(userDetailsCache.get(eq("authUser"), any())).thenReturn(userDetails);
 
         Authentication authentication = jwtTokenProvider.getAuthentication("token");
@@ -101,9 +101,8 @@ class JwtTokenProviderTest {
     @Test
     void testValidateTokenStructure_ValidToken() {
         when(jwtValidationCache.get(anyString(), any())).thenAnswer(invocation -> {
-            String token = invocation.getArgument(0);
             java.util.function.Function<String, Boolean> func = invocation.getArgument(1);
-            return func.apply(token);
+            return func.apply("ignored");
         });
 
         when(jwtUtils.parseToken(anyString())).thenReturn(mock(Claims.class));
@@ -116,12 +115,9 @@ class JwtTokenProviderTest {
     @Test
     void testValidateTokenStructure_ExpiredToken() {
         when(jwtValidationCache.get(anyString(), any())).thenAnswer(invocation -> {
-            String token = invocation.getArgument(0);
             java.util.function.Function<String, Boolean> func = invocation.getArgument(1);
-
-            when(jwtUtils.parseToken(token)).thenThrow(new ExpiredJwtException(null, null, "Token expired"));
-
-            return func.apply(token);
+            when(jwtUtils.parseToken(anyString())).thenThrow(new ExpiredJwtException(null, null, "Token expired"));
+            return func.apply("ignored");
         });
 
         JwtValidationException ex = assertThrows(JwtValidationException.class, () -> {
@@ -134,12 +130,9 @@ class JwtTokenProviderTest {
     @Test
     void testValidateTokenStructure_InvalidToken() {
         when(jwtValidationCache.get(anyString(), any())).thenAnswer(invocation -> {
-            String token = invocation.getArgument(0);
             java.util.function.Function<String, Boolean> func = invocation.getArgument(1);
-
-            when(jwtUtils.parseToken(token)).thenThrow(new JwtValidationException("Invalid token"));
-
-            return func.apply(token);
+            when(jwtUtils.parseToken(anyString())).thenThrow(new JwtValidationException("Invalid token"));
+            return func.apply("ignored");
         });
 
         assertThrows(JwtValidationException.class, () -> {

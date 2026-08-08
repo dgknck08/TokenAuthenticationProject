@@ -1,7 +1,7 @@
 package com.example.ecommerce.service;
 
 import com.example.ecommerce.auth.model.User;
-import com.example.ecommerce.auth.repository.UserRepository;
+import com.example.ecommerce.auth.service.UserService;
 import com.example.ecommerce.order.model.OrderStatus;
 import com.example.ecommerce.order.repository.OrderRepository;
 import com.example.ecommerce.product.model.Product;
@@ -40,7 +40,7 @@ class ProductReviewServiceTest {
     private ProductRepository productRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private UserService userService;
 
     @Mock
     private OrderRepository orderRepository;
@@ -65,7 +65,7 @@ class ProductReviewServiceTest {
         request.setComment("  Cok  kaliteli  urun  123  ");
 
         when(productRepository.findById(10L)).thenReturn(Optional.of(product));
-        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+        when(userService.getByUsername("alice")).thenReturn(user);
         when(productReviewRepository.existsByProduct_IdAndUserId(10L, 15L)).thenReturn(false);
         when(orderRepository.hasPurchasedProduct(eq(15L), eq(10L), eq(EnumSet.of(
                 OrderStatus.PAID,
@@ -108,7 +108,7 @@ class ProductReviewServiceTest {
         request.setComment("Kaliteli ve kullanisli urun");
 
         when(productRepository.findById(10L)).thenReturn(Optional.of(product));
-        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+        when(userService.getByUsername("alice")).thenReturn(user);
         when(productReviewRepository.existsByProduct_IdAndUserId(10L, 15L)).thenReturn(true);
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
@@ -134,7 +134,7 @@ class ProductReviewServiceTest {
         request.setComment("Harika <script>");
 
         when(productRepository.findById(10L)).thenReturn(Optional.of(product));
-        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+        when(userService.getByUsername("alice")).thenReturn(user);
         when(productReviewRepository.existsByProduct_IdAndUserId(10L, 15L)).thenReturn(false);
         when(orderRepository.hasPurchasedProduct(any(), any(), any())).thenReturn(true);
 
@@ -161,7 +161,7 @@ class ProductReviewServiceTest {
         request.setComment("Kaliteli ve kullanisli urun");
 
         when(productRepository.findById(10L)).thenReturn(Optional.of(product));
-        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+        when(userService.getByUsername("alice")).thenReturn(user);
         when(productReviewRepository.existsByProduct_IdAndUserId(10L, 15L)).thenReturn(false);
         when(orderRepository.hasPurchasedProduct(any(), any(), any())).thenReturn(false);
 

@@ -32,6 +32,9 @@ public class Product {
     private String attributesJson;
     private int stock;
 
+    @Column(nullable = false)
+    private boolean active = true;
+
     public Product(Long id, String name, String description, BigDecimal price, String imageUrl, String category, int stock) {
         this.id = id;
         this.name = name;

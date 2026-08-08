@@ -28,6 +28,7 @@
         <jacoco.version>0.8.11</jacoco.version>
         <pmd.version>3.21.2</pmd.version>
         <checkstyle.version>3.3.1</checkstyle.version>
+        <sonar.maven.plugin.version>3.11.0.3922</sonar.maven.plugin.version>
 
         <!-- SonarCloud -->
         <sonar.organization>dgknck08</sonar.organization>
@@ -222,6 +223,15 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>${jacoco.version}</version>
+                <configuration>
+                    <!-- Infrastructure/wiring and external gateway clients carry no
+                         business logic worth unit-testing; keep them out of coverage. -->
+                    <excludes>
+                        <exclude>**/config/**</exclude>
+                        <exclude>**/*Application.*</exclude>
+                        <exclude>com/example/ecommerce/payment/iyzico/IyzicoGatewayClient.*</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <goals><goal>prepare-agent</goal></goals>
@@ -243,12 +253,12 @@
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.40</minimum>
+                                            <minimum>0.78</minimum>
                                         </limit>
                                         <limit>
                                             <counter>BRANCH</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.15</minimum>
+                                            <minimum>0.55</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
@@ -256,6 +266,13 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+
+            <!-- SonarCloud scanner -->
+            <plugin>
+                <groupId>org.sonarsource.scanner.maven</groupId>
+                <artifactId>sonar-maven-plugin</artifactId>
+                <version>${sonar.maven.plugin.version}</version>
             </plugin>
         </plugins>
     </build>

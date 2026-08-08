@@ -20,6 +20,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.ecommerce.product.dto.ProductDto;
 import com.example.ecommerce.product.exception.ProductNotFoundException;
@@ -36,23 +37,25 @@ public class ProductService {
     private final InventoryService inventoryService;
     private final AuditService auditService;
 
-    // Constructor injection
     public ProductService(ProductRepository productRepository, InventoryService inventoryService, AuditService auditService) {
         this.productRepository = productRepository;
         this.inventoryService = inventoryService;
         this.auditService = auditService;
     }
 
+    @Transactional(readOnly = true)
     public Page<ProductDto> getAllProducts(Pageable pageable) {
-        return productRepository.findAll(pageable).map(ProductMapper::toDto);
+        return productRepository.findByActiveTrue(pageable).map(ProductMapper::toDto);
     }
 
+    @Transactional(readOnly = true)
     public ProductDto getProductById(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException(PRODUCT_NOT_FOUND_WITH_ID + id));
         return ProductMapper.toDto(product);
     }
 
+    @Transactional(readOnly = true)
     @Cacheable(value = "productSearch", key = "T(String).format('%s|%s|%s|%s|%s|%s', #category, #brand, #query, #pageable.pageNumber, #pageable.pageSize, #pageable.sort)")
     public Page<ProductDto> searchProducts(String category, String brand, String query, Pageable pageable) {
         String normalizedCategory = normalizeFilter(category);
@@ -69,6 +72,7 @@ public class ProductService {
         }
     }
 
+    @Transactional
     @CacheEvict(value = "productSearch", allEntries = true)
     public ProductDto createProduct(ProductDto productDto) {
         Product product = ProductMapper.toEntity(productDto);
@@ -84,6 +88,7 @@ public class ProductService {
         return ProductMapper.toDto(savedProduct);
     }
 
+    @Transactional
     @CacheEvict(value = "productSearch", allEntries = true)
     public ProductDto updateProduct(Long id, ProductDto productDto) {
         Product existing = productRepository.findById(id)
@@ -112,6 +117,7 @@ public class ProductService {
         return ProductMapper.toDto(updatedProduct);
     }
 
+    @Transactional
     @CacheEvict(value = "productSearch", allEntries = true)
     public void deleteProduct(Long id) {
         Product product = productRepository.findById(id)
@@ -124,14 +130,16 @@ public class ProductService {
                 "Product deleted", details);
     }
 
+    @Transactional(readOnly = true)
     public List<ProductDto> getProductsByCategory(String category) {
-        return productRepository.findByCategoryIgnoreCase(category).stream()
+        return productRepository.findByCategoryIgnoreCaseAndActiveTrue(category).stream()
                 .map(ProductMapper::toDto)
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<ProductDto> getProductsByBrand(String brand) {
-        return productRepository.findByBrandIgnoreCase(brand).stream()
+        return productRepository.findByBrandIgnoreCaseAndActiveTrue(brand).stream()
                 .map(ProductMapper::toDto)
                 .toList();
     }
@@ -197,7 +205,7 @@ public class ProductService {
     }
 
     private Page<ProductDto> searchProductsFallback(String category, String brand, String query, Pageable pageable) {
-        Specification<Product> spec = unrestricted();
+        Specification<Product> spec = (root, cq, cb) -> cb.isTrue(root.get("active"));
 
         if (hasText(category)) {
             String normalizedCategory = category.trim().toLowerCase();
@@ -218,9 +226,5 @@ public class ProductService {
         }
 
         return productRepository.findAll(spec, pageable).map(ProductMapper::toDto);
-    }
-
-    private Specification<Product> unrestricted() {
-        return (root, query, cb) -> cb.conjunction();
     }
 }

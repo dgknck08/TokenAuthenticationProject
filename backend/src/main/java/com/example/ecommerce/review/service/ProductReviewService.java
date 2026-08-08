@@ -1,8 +1,7 @@
 package com.example.ecommerce.review.service;
 
-import com.example.ecommerce.auth.exception.UserNotFoundException;
 import com.example.ecommerce.auth.model.User;
-import com.example.ecommerce.auth.repository.UserRepository;
+import com.example.ecommerce.auth.service.UserService;
 import com.example.ecommerce.order.model.OrderStatus;
 import com.example.ecommerce.order.repository.OrderRepository;
 import com.example.ecommerce.product.exception.ProductNotFoundException;
@@ -36,16 +35,16 @@ public class ProductReviewService {
 
     private final ProductReviewRepository productReviewRepository;
     private final ProductRepository productRepository;
-    private final UserRepository userRepository;
+    private final UserService userService;
     private final OrderRepository orderRepository;
 
     public ProductReviewService(ProductReviewRepository productReviewRepository,
                                 ProductRepository productRepository,
-                                UserRepository userRepository,
+                                UserService userService,
                                 OrderRepository orderRepository) {
         this.productReviewRepository = productReviewRepository;
         this.productRepository = productRepository;
-        this.userRepository = userRepository;
+        this.userService = userService;
         this.orderRepository = orderRepository;
     }
 
@@ -59,8 +58,7 @@ public class ProductReviewService {
     public ProductReviewResponse createReview(Long productId, String username, CreateProductReviewRequest request) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found with id " + productId));
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UserNotFoundException("User not found: " + username));
+        User user = userService.getByUsername(username);
 
         if (productReviewRepository.existsByProduct_IdAndUserId(productId, user.getId())) {
             throw new IllegalArgumentException("Bu urun icin zaten yorum yaptiniz.");

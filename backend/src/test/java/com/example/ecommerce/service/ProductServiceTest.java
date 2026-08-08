@@ -57,7 +57,7 @@ class ProductServiceTest {
     @Test
     void getAllProducts_ShouldMapRepositoryEntitiesToDtoPage() {
         Product product = new Product(1L, "Phone", "Flagship", new BigDecimal("999.99"), "img", "Electronics", 10);
-        when(productRepository.findAll(PageRequest.of(0, 20))).thenReturn(new PageImpl<>(List.of(product)));
+        when(productRepository.findByActiveTrue(PageRequest.of(0, 20))).thenReturn(new PageImpl<>(List.of(product)));
 
         var result = productService.getAllProducts(PageRequest.of(0, 20));
 

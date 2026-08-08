@@ -2,8 +2,8 @@ package com.example.ecommerce.wishlist.service;
 
 import com.example.ecommerce.auth.model.AuditLog;
 import com.example.ecommerce.auth.model.User;
-import com.example.ecommerce.auth.repository.UserRepository;
 import com.example.ecommerce.auth.service.AuditService;
+import com.example.ecommerce.auth.service.UserService;
 import com.example.ecommerce.product.model.Product;
 import com.example.ecommerce.product.repository.ProductRepository;
 import com.example.ecommerce.wishlist.dto.WishlistItemResponse;
@@ -22,18 +22,18 @@ import java.util.concurrent.TimeUnit;
 @Transactional
 public class WishlistService {
     private final WishlistItemRepository wishlistItemRepository;
-    private final UserRepository userRepository;
+    private final UserService userService;
     private final ProductRepository productRepository;
     private final AuditService auditService;
     private final MeterRegistry meterRegistry;
 
     public WishlistService(WishlistItemRepository wishlistItemRepository,
-                           UserRepository userRepository,
+                           UserService userService,
                            ProductRepository productRepository,
                            AuditService auditService,
                            MeterRegistry meterRegistry) {
         this.wishlistItemRepository = wishlistItemRepository;
-        this.userRepository = userRepository;
+        this.userService = userService;
         this.productRepository = productRepository;
         this.auditService = auditService;
         this.meterRegistry = meterRegistry;
@@ -94,8 +94,7 @@ public class WishlistService {
     }
 
     private User getUserByUsername(String username) {
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
+        return userService.getByUsername(username);
     }
 
     private WishlistItemResponse toResponse(WishlistItem item) {

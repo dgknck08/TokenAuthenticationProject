@@ -2,8 +2,8 @@ package com.example.ecommerce.order.service;
 
 import com.example.ecommerce.auth.model.User;
 import com.example.ecommerce.auth.model.AuditLog;
-import com.example.ecommerce.auth.repository.UserRepository;
 import com.example.ecommerce.auth.service.AuditService;
+import com.example.ecommerce.auth.service.UserService;
 import com.example.ecommerce.inventory.service.InventoryService;
 import com.example.ecommerce.order.dto.CheckoutQuoteRequest;
 import com.example.ecommerce.order.dto.CheckoutQuoteResponse;
@@ -46,20 +46,20 @@ public class OrderService {
     private static final String METRIC_ACTION_CANCEL_CUSTOMER = "cancel_customer";
 
     private final OrderRepository orderRepository;
-    private final UserRepository userRepository;
+    private final UserService userService;
     private final InventoryService inventoryService;
     private final CheckoutPricingService checkoutPricingService;
     private final AuditService auditService;
     private final MeterRegistry meterRegistry;
 
     public OrderService(OrderRepository orderRepository,
-                        UserRepository userRepository,
+                        UserService userService,
                         InventoryService inventoryService,
                         CheckoutPricingService checkoutPricingService,
                         AuditService auditService,
                         MeterRegistry meterRegistry) {
         this.orderRepository = orderRepository;
-        this.userRepository = userRepository;
+        this.userService = userService;
         this.inventoryService = inventoryService;
         this.checkoutPricingService = checkoutPricingService;
         this.auditService = auditService;
@@ -68,8 +68,7 @@ public class OrderService {
 
     public OrderResponse createOrder(String username, CreateOrderRequest request) {
         long startNanos = System.nanoTime();
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
+        User user = userService.getByUsername(username);
 
         Order order = new Order();
         order.setUserId(user.getId());
@@ -112,8 +111,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public CheckoutQuoteResponse quoteCheckout(String username, CheckoutQuoteRequest request) {
         long startNanos = System.nanoTime();
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
+        User user = userService.getByUsername(username);
         OrderPricingResult pricing = checkoutPricingService.buildPricing(
                 request.getItems(),
                 user.getId(),

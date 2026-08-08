@@ -1,8 +1,8 @@
 package com.example.ecommerce.service;
 
 import com.example.ecommerce.auth.model.User;
-import com.example.ecommerce.auth.repository.UserRepository;
 import com.example.ecommerce.auth.service.AuditService;
+import com.example.ecommerce.auth.service.UserService;
 import com.example.ecommerce.product.model.Product;
 import com.example.ecommerce.product.repository.ProductRepository;
 import com.example.ecommerce.wishlist.model.WishlistItem;
@@ -30,7 +30,7 @@ class WishlistServiceTest {
     @Mock
     private WishlistItemRepository wishlistItemRepository;
     @Mock
-    private UserRepository userRepository;
+    private UserService userService;
     @Mock
     private ProductRepository productRepository;
     @Mock
@@ -42,7 +42,7 @@ class WishlistServiceTest {
     void setUp() {
         wishlistService = new WishlistService(
                 wishlistItemRepository,
-                userRepository,
+                userService,
                 productRepository,
                 auditService,
                 new SimpleMeterRegistry()
@@ -63,7 +63,7 @@ class WishlistServiceTest {
         saved.setProduct(product);
         saved.setCreatedAt(Instant.now());
 
-        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+        when(userService.getByUsername("alice")).thenReturn(user);
         when(wishlistItemRepository.findByUserIdAndProduct_Id(3L, 5L)).thenReturn(Optional.empty());
         when(productRepository.findById(5L)).thenReturn(Optional.of(product));
         when(wishlistItemRepository.save(any(WishlistItem.class))).thenReturn(saved);
@@ -90,7 +90,7 @@ class WishlistServiceTest {
         existing.setProduct(product);
         existing.setCreatedAt(Instant.now());
 
-        when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user));
+        when(userService.getByUsername("bob")).thenReturn(user);
         when(wishlistItemRepository.findByUserIdAndProduct_Id(4L, 7L)).thenReturn(Optional.of(existing));
 
         var response = wishlistService.addItem("bob", 7L);

@@ -15,7 +15,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
@@ -23,19 +22,25 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 @Transactional
 @Slf4j
 public class CartItemServiceImpl implements CartItemService {
-    
+
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
     private final InventoryService inventoryService;
-    @Lazy
     private final CartItemService selfProxy;
 
-    // ================ Basic CRUD Operations ================
-    
+    public CartItemServiceImpl(CartItemRepository cartItemRepository,
+                               ProductRepository productRepository,
+                               InventoryService inventoryService,
+                               @Lazy CartItemService selfProxy) {
+        this.cartItemRepository = cartItemRepository;
+        this.productRepository = productRepository;
+        this.inventoryService = inventoryService;
+        this.selfProxy = selfProxy;
+    }
+
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "cartItems", key = "#id")
@@ -86,8 +91,6 @@ public class CartItemServiceImpl implements CartItemService {
         }
     }
 
-    // ================ Query Operations ================
-    
     @Override
     @Transactional(readOnly = true)
     public List<CartItem> getCartItemsByCartId(Long cartId) {
@@ -119,8 +122,6 @@ public class CartItemServiceImpl implements CartItemService {
         }
     }
 
-    // ================ Bulk Operations ================
-    
     @Override
     public void deleteByCartIdAndProductId(Long cartId, Long productId) {
         log.debug("Deleting cart item for cart ID: {} and product ID: {}", cartId, productId);
@@ -157,8 +158,6 @@ public class CartItemServiceImpl implements CartItemService {
         }
     }
 
-    // ================ Statistics and Utility Operations ================
-    
     @Override
     @Transactional(readOnly = true)
     public long countByCartId(Long cartId) {
@@ -211,8 +210,6 @@ public class CartItemServiceImpl implements CartItemService {
         }
     }
 
-    // ================ Advanced Operations ================
-    
     @Override
     public CartItem updateQuantity(Long cartItemId, int newQuantity) {
         log.debug("Updating quantity to {} for cart item ID: {}", newQuantity, cartItemId);
@@ -222,8 +219,7 @@ public class CartItemServiceImpl implements CartItemService {
         }
         
         CartItem item = selfProxy.getCartItemById(cartItemId);
-        
-        // Validate stock if needed
+
         validateStock(item.getProduct(), newQuantity);
         
         item.setQuantity(newQuantity);
@@ -328,7 +324,7 @@ public class CartItemServiceImpl implements CartItemService {
     }
     
     private void updateItemPrice(CartItem item) {
-        if (item.getId() != null) { // Existing item
+        if (item.getId() != null) {
             Product currentProduct = productRepository.findById(item.getProduct().getId())
                     .orElse(null);
             
@@ -343,8 +339,6 @@ public class CartItemServiceImpl implements CartItemService {
     private void validateStock(Product product, int requestedQuantity) {
         inventoryService.ensureAvailableStock(product.getId(), requestedQuantity);
     }
-    
-    // ================ Pagination Support ================
     
     @Override
     @Transactional(readOnly = true)
@@ -364,8 +358,6 @@ public class CartItemServiceImpl implements CartItemService {
             throw new CartOperationException("Failed to get paginated cart items", e);
         }
     }
-    
-    // ================ Batch Operations ================
     
     @Override
     public List<CartItem> saveAllCartItems(List<CartItem> items) {

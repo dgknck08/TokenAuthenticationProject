@@ -33,3 +33,23 @@ backend/logs/
 .DS_Store
 Thumbs.db
 
+# AI asistan araçları (Claude, Cursor, Copilot, Aider vb.)
+.claude/
+**/.claude/
+CLAUDE.md
+**/CLAUDE.md
+.claude.json
+**/.claude.json
+.cursor/
+**/.cursor/
+.cursorrules
+**/.cursorrules
+.aider*
+**/.aider*
+.github/copilot-instructions.md
+**/copilot-instructions.md
+.continue/
+**/.continue/
+.windsurf/
+**/.windsurf/
+

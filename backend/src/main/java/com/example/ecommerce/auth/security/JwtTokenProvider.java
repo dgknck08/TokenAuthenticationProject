@@ -14,6 +14,9 @@ import org.springframework.stereotype.Component;
 import com.example.ecommerce.auth.exception.JwtValidationException;
 import com.github.benmanes.caffeine.cache.Cache;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -28,8 +31,7 @@ public class JwtTokenProvider {
     private final int jwtExpirationMs;
     private final String issuer;
     private final SecureRandom secureRandom;
-    
-    //Caffeine caches
+
     private final Cache<String, Claims> jwtClaimsCache;
     private final Cache<String, Boolean> jwtValidationCache;
     private final Cache<String, UserDetails> userDetailsCache;
@@ -75,13 +77,11 @@ this.userDetailsCache = userDetailsCache;
                 .setNotBefore(Date.from(now))
                 .signWith(jwtUtils.getSigningKey(), SignatureAlgorithm.HS512)
                 .compact();
-        
-        // cache içine ekleniyor.
+
         try {
             Claims tokenClaims = jwtUtils.parseToken(token);
-            jwtClaimsCache.put(token, tokenClaims);
+            jwtClaimsCache.put(cacheKey(token), tokenClaims);
         } catch (Exception e) {
-            // Cache hatası token generationı etkilemez
         }
         
         return token;
@@ -102,7 +102,7 @@ this.userDetailsCache = userDetailsCache;
 
         UserDetails userDetails = userDetailsCache.get(username, key -> {
             try {
-                return userDetailsService.loadUserByUsername(key);
+                return CachedUserDetails.from(userDetailsService.loadUserByUsername(key));
             } catch (Exception e) {
                 throw new IllegalStateException("Failed to load authenticated user details", e);
             }
@@ -119,20 +119,18 @@ this.userDetailsCache = userDetailsCache;
         return (String) getClaimsFromToken(token).get("jti");
     }
 
-    //blacklist kontrollü yapiliyor.
     public boolean validateTokenStructure(String token) {
-        return jwtValidationCache.get(token, key -> {
+        String cacheKey = cacheKey(token);
+        return jwtValidationCache.get(cacheKey, ignored -> {
             try {
-                Claims claims = jwtUtils.parseToken(key);
-                
-                // token tip kontrolü (acces mi? refresh mi?)
+                Claims claims = jwtUtils.parseToken(token);
+
                 String tokenType = (String) claims.get("token_type");
                 if (tokenType != null && !"access".equals(tokenType)) {
                     throw new JwtValidationException("Invalid token type for authentication");
                 }
-                
-                // claims -> cache eklenir.
-                jwtClaimsCache.put(key, claims);
+
+                jwtClaimsCache.put(cacheKey, claims);
                 
                 return true;
             } catch (ExpiredJwtException ex) {
@@ -155,12 +153,13 @@ this.userDetailsCache = userDetailsCache;
     }
 
     private Claims getClaimsFromToken(String token) {
-        Claims cachedClaims = jwtClaimsCache.getIfPresent(token);
+        String cacheKey = cacheKey(token);
+        Claims cachedClaims = jwtClaimsCache.getIfPresent(cacheKey);
         if (cachedClaims != null) {
             return cachedClaims;
         }
         
-        return jwtClaimsCache.get(token, jwtUtils::parseToken);
+        return jwtClaimsCache.get(cacheKey, ignored -> jwtUtils.parseToken(token));
     }
 
     private String generateTokenId() {
@@ -169,15 +168,14 @@ this.userDetailsCache = userDetailsCache;
         return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
     }
 
-    // cache temizleme.
     public void invalidateTokenFromCache(String token) {
-        jwtClaimsCache.invalidate(token);
-        jwtValidationCache.invalidate(token);
+        String cacheKey = cacheKey(token);
+        jwtClaimsCache.invalidate(cacheKey);
+        jwtValidationCache.invalidate(cacheKey);
     }
 
     public void invalidateUserFromCache(String username) {
         userDetailsCache.invalidate(username);
-        // 
     }
 
     public void invalidateAllCaches() {
@@ -201,5 +199,18 @@ this.userDetailsCache = userDetailsCache;
             CACHE_STATS_KEY, userDetailsCache.stats()
         ));
         return stats;
+    }
+
+    private String cacheKey(String token) {
+        if (token == null || token.isBlank()) {
+            throw new IllegalArgumentException("Token is required");
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 algorithm is not available", e);
+        }
     }
 }

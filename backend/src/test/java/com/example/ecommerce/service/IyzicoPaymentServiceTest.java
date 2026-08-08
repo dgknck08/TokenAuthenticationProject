@@ -188,6 +188,128 @@ class IyzicoPaymentServiceTest {
         assertEquals(OrderStatus.CANCELLED, response.getOrderStatus());
     }
 
+    @Test
+    void getPaymentStatus_shouldReturnStatusForOwner() {
+        Order order = buildCreatedOrder();
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        var status = paymentService.getPaymentStatus("alice", 1L);
+
+        assertEquals(1L, status.getOrderId());
+        assertEquals(OrderStatus.CREATED, status.getOrderStatus());
+        assertEquals(PaymentProviderStatus.NOT_STARTED, status.getPaymentStatus());
+    }
+
+    @Test
+    void getPaymentStatus_shouldRejectForeignOwner() {
+        Order order = buildCreatedOrder();
+        order.setUsername("bob");
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThrows(com.example.ecommerce.order.exception.OrderAccessDeniedException.class,
+                () -> paymentService.getPaymentStatus("alice", 1L));
+    }
+
+    @Test
+    void getPaymentStatus_shouldThrowWhenOrderMissing() {
+        when(orderRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(com.example.ecommerce.order.exception.OrderNotFoundException.class,
+                () -> paymentService.getPaymentStatus("alice", 99L));
+    }
+
+    @Test
+    void handleCallback_shouldRejectMissingToken() {
+        assertThrows(IllegalArgumentException.class,
+                () -> paymentService.handleCallback("  ", "conv"));
+    }
+
+    @Test
+    void handleCallback_shouldMarkFailedWhenRetrieveUnsuccessful() {
+        Order order = buildCreatedOrder();
+        order.setPaymentConversationId("conv-f");
+        order.setPaymentToken("token-f");
+        when(orderRepository.findByPaymentToken("token-f")).thenReturn(Optional.of(order));
+        when(gatewayClient.retrieveCheckoutForm("token-f"))
+                .thenReturn(new IyzicoRetrieveResult(false, "failure", "FAILURE", "conv-f", null, null, "declined"));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var response = paymentService.handleCallback("token-f", "conv-f");
+
+        assertEquals(false, response.isSuccess());
+        assertEquals(PaymentProviderStatus.FAILED, order.getPaymentProviderStatus());
+    }
+
+    @Test
+    void handleCallback_shouldRejectConversationMismatch() {
+        Order order = buildCreatedOrder();
+        order.setPaymentConversationId("conv-A");
+        order.setPaymentToken("token-x");
+        when(orderRepository.findByPaymentToken("token-x")).thenReturn(Optional.of(order));
+        when(gatewayClient.retrieveCheckoutForm("token-x"))
+                .thenReturn(new IyzicoRetrieveResult(true, "success", "SUCCESS", "conv-B", "pay", null, null));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> paymentService.handleCallback("token-x", "conv-A"));
+    }
+
+    @Test
+    void processWebhook_shouldIgnoreBlankConversation() {
+        paymentService.processWebhookNotification("PAYMENT", "  ", "p1", "SUCCESS", null);
+        verify(orderRepository, org.mockito.Mockito.never()).findByPaymentConversationId(any());
+    }
+
+    @Test
+    void processWebhook_shouldIgnoreUnknownOrder() {
+        when(orderRepository.findByPaymentConversationId("conv")).thenReturn(Optional.empty());
+        paymentService.processWebhookNotification("PAYMENT", "conv", "p1", "SUCCESS", null);
+        verify(orderRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void processWebhook_shouldApplyPaymentOnSuccess() {
+        Order order = buildCreatedOrder();
+        when(orderRepository.findByPaymentConversationId("conv")).thenReturn(Optional.of(order));
+
+        paymentService.processWebhookNotification("PAYMENT_SUCCEEDED", "conv", "pay-1", "SUCCESS", null);
+
+        assertEquals(OrderStatus.PAID, order.getStatus());
+        verify(orderRepository).save(order);
+        verify(cartService).clearCart(10L);
+    }
+
+    @Test
+    void processWebhook_shouldApplyFailureOnFailedEvent() {
+        Order order = buildCreatedOrder();
+        when(orderRepository.findByPaymentConversationId("conv")).thenReturn(Optional.of(order));
+
+        paymentService.processWebhookNotification("PAYMENT_FAILED", "conv", "pay-1", "FAILURE", "declined");
+
+        assertEquals(PaymentProviderStatus.FAILED, order.getPaymentProviderStatus());
+        verify(orderRepository).save(order);
+    }
+
+    @Test
+    void processWebhook_shouldIgnoreFailureWhenAlreadyPaid() {
+        Order order = buildCreatedOrder();
+        order.setStatus(OrderStatus.PAID);
+        order.setPaymentProviderStatus(PaymentProviderStatus.SUCCESS);
+        when(orderRepository.findByPaymentConversationId("conv")).thenReturn(Optional.of(order));
+
+        paymentService.processWebhookNotification("PAYMENT_FAILED", "conv", "pay-1", "FAILURE", "declined");
+
+        verify(orderRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void processWebhook_shouldIgnoreUnrelatedEvent() {
+        Order order = buildCreatedOrder();
+        when(orderRepository.findByPaymentConversationId("conv")).thenReturn(Optional.of(order));
+
+        paymentService.processWebhookNotification("PAYMENT_PENDING", "conv", "pay-1", "PENDING", null);
+
+        verify(orderRepository, org.mockito.Mockito.never()).save(any());
+    }
+
     private Order buildCreatedOrder() {
         Order order = new Order();
         order.setId(1L);

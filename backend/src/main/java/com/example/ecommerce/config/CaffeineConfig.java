@@ -46,15 +46,6 @@ public class CaffeineConfig {
                 .build();
     }
 
-   
-    @Bean("tokenMetadataCache")
-    public Cache<String, Object> tokenMetadataCache() {
-        return Caffeine.newBuilder()
-                .maximumSize(jwtCacheMaxSize)
-                .expireAfterWrite(jwtCacheExpireMinutes, TimeUnit.MINUTES)
-                .recordStats()
-                .build();
-    }
     @Bean("jwtClaimsCache")
     public Cache<String, Claims> jwtClaimsCache() {
         return Caffeine.newBuilder()

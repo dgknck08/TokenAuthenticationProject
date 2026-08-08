@@ -76,9 +76,8 @@ public class TestDataLoader implements CommandLineRunner {
 
     private void cleanupLegacySeedProducts() {
         try {
-            productRepository.deleteBySkuIn(LEGACY_SEED_SKUS);
+            productRepository.deactivateBySkuIn(LEGACY_SEED_SKUS);
         } catch (Exception ignored) {
-            // Do not fail application startup for legacy cleanup.
         }
     }
 

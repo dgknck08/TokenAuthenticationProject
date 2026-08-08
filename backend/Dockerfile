@@ -4,6 +4,8 @@ WORKDIR /app
 # Copy pom.xml first for better caching
 COPY pom.xml .
 RUN mvn dependency:go-offline -B
+# Copy Lombok config (controls annotation copying onto generated constructors)
+COPY lombok.config .
 # Copy source code
 COPY src ./src
 # Build the application

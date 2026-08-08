@@ -18,16 +18,21 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     List<Product> findByBrandIgnoreCase(String brand);
     Optional<Product> findBySku(String sku);
 
+    Page<Product> findByActiveTrue(Pageable pageable);
+    List<Product> findByCategoryIgnoreCaseAndActiveTrue(String category);
+    List<Product> findByBrandIgnoreCaseAndActiveTrue(String brand);
+
     @Modifying
-    @Query("delete from Product p where p.sku in :skus")
+    @Query("update Product p set p.active = false where p.sku in :skus")
     @Transactional
-    long deleteBySkuIn(@Param("skus") List<String> skus);
+    int deactivateBySkuIn(@Param("skus") List<String> skus);
 
     @Query(
             value = """
                     SELECT p.*
                     FROM product p
-                    WHERE (:category IS NULL OR lower(p.category) = lower(:category))
+                    WHERE p.active = TRUE
+                      AND (:category IS NULL OR lower(p.category) = lower(:category))
                       AND (:brand IS NULL OR lower(p.brand) = lower(:brand))
                       AND (
                             :query IS NULL
@@ -51,7 +56,8 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
             countQuery = """
                     SELECT COUNT(*)
                     FROM product p
-                    WHERE (:category IS NULL OR lower(p.category) = lower(:category))
+                    WHERE p.active = TRUE
+                      AND (:category IS NULL OR lower(p.category) = lower(:category))
                       AND (:brand IS NULL OR lower(p.brand) = lower(:brand))
                       AND (
                             :query IS NULL
