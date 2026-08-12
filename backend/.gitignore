@@ -36,6 +36,8 @@ application.yml
 *.env
 application.properties
 application-test.properties
+# Test profili config'i sırf yerelde kalmasın; CI'da da gerekli (gerçek sır içermez).
+!src/test/resources/application-test.properties
 target/
 bin/
 .idea/

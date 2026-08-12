@@ -68,21 +68,6 @@ jobs:
     name: Test and Quality Check
     timeout-minutes: 20
 
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: testdb
-          POSTGRES_USER: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -101,10 +86,10 @@ jobs:
         working-directory: ${{ env.WORKING_DIR }}
         run: mvn -B -ntp clean verify pmd:check checkstyle:check
         env:
-          SPRING_PROFILES_ACTIVE: test
-          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/testdb
-          SPRING_DATASOURCE_USERNAME: postgres
-          SPRING_DATASOURCE_PASSWORD: test
+          # Veritabanını integration testleri Testcontainers ile kendisi açar
+          # (ubuntu-latest runner'ında Docker hazır gelir). Ryuk reaper'ı CI'da
+          # kapatıyoruz; runner zaten geçici, container temizliği derdi yok.
+          TESTCONTAINERS_RYUK_DISABLED: "true"
 
       - name: Detect test report files
         id: test-report-files
