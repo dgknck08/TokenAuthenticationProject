@@ -1,5 +1,9 @@
 package com.example.ecommerce.service;
-
+import java.util.Arrays;
+import java.time.Duration;
+import static org.mockito.ArgumentMatchers.startsWith;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import com.example.ecommerce.auth.model.AuditLog;
 import com.example.ecommerce.auth.service.AccountLockoutService;
 import com.example.ecommerce.auth.service.AuditService;
@@ -25,7 +29,6 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -68,7 +71,7 @@ class AccountLockoutServiceTest {
         when(connection.keyCommands()).thenReturn(keyCommands);
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"rawtypes"})
     private void pipelineReturns(List<Object> results) {
         when(redisTemplate.executePipelined(any(RedisCallback.class))).thenAnswer(inv -> {
             ((RedisCallback) inv.getArgument(0)).doInRedis(connection);
@@ -217,5 +220,62 @@ class AccountLockoutServiceTest {
         when(redisTemplate.opsForValue()).thenReturn(valueOps);
         when(valueOps.get("auth:failed_attempts:ghost")).thenReturn(null);
         assertEquals(0, service.getFailedAttemptCount("ghost"));
+    }
+    @Test
+    void recordLoginAttemptAsync_nullPipelineCount_shouldTreatAsZero() {
+        when(request.getHeader("X-Forwarded-For")).thenReturn("1.2.3.4");
+        when(request.getHeader("User-Agent")).thenReturn("UA");
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        pipelineReturns(Arrays.asList(null, Boolean.TRUE, 1L, Boolean.TRUE));
+
+        CompletableFuture<Void> result =
+                service.recordLoginAttemptAsync("alice", false, "bad", request);
+
+        assertTrue(result.isDone());
+        assertFalse(result.isCompletedExceptionally());
+    }
+
+    @Test
+    void checkSuspiciousActivity_firstLoginEver_shouldNotFlagSuspicious() {
+        when(request.getHeader("X-Forwarded-For")).thenReturn("1.1.1.1");
+        when(request.getHeader("User-Agent")).thenReturn("UA");
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(valueOps.get("auth:suspicious:newuser")).thenReturn(null);
+        pipelineReturns(List.of());
+
+        service.recordLoginAttemptAsync("newuser", true, null, request);
+
+        verify(auditService, never()).logAuthEvent(
+                isNull(), eq("newuser"), eq(AuditLog.AuditAction.SUSPICIOUS_ACTIVITY), anyString(), any());
+    }
+
+    @Test
+    void recordLoginAttemptAsync_shouldUseXRealIpWhenForwardedForAbsent() {
+        when(request.getHeader("X-Forwarded-For")).thenReturn(null);
+        when(request.getHeader("X-Real-IP")).thenReturn("6.6.6.6");
+        when(request.getHeader("User-Agent")).thenReturn("UA");
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        pipelineReturns(List.of());
+
+        service.recordLoginAttemptAsync("alice", true, null, request);
+
+        verify(auditService).logAuthEvent(isNull(), eq("alice"),
+                eq(AuditLog.AuditAction.USER_LOGIN_SUCCESS), anyString(), eq(request));
+    }
+
+    @Test
+    void recordLoginAttemptAsync_saveDetailsThrows_shouldStillComplete() {
+        when(request.getHeader("X-Forwarded-For")).thenReturn("1.1.1.1");
+        when(request.getHeader("User-Agent")).thenReturn("UA");
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        doThrow(new RuntimeException("redis write fail"))
+                .when(valueOps).set(startsWith("auth:attempt_details:"), any(), any(Duration.class));
+        pipelineReturns(List.of());
+
+        CompletableFuture<Void> result =
+                service.recordLoginAttemptAsync("alice", true, null, request);
+
+        assertTrue(result.isDone());
+        assertFalse(result.isCompletedExceptionally());
     }
 }
