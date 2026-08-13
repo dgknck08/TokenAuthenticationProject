@@ -4,6 +4,7 @@ import com.example.ecommerce.auth.model.User;
 import com.example.ecommerce.auth.service.AuditService;
 import com.example.ecommerce.auth.service.UserService;
 import com.example.ecommerce.inventory.service.InventoryService;
+import com.example.ecommerce.order.dto.CheckoutQuoteRequest;
 import com.example.ecommerce.order.dto.CreateOrderRequest;
 import com.example.ecommerce.order.dto.OrderItemRequest;
 import com.example.ecommerce.order.exception.OrderAccessDeniedException;
@@ -106,6 +107,37 @@ class OrderServiceTest {
         assertEquals(new BigDecimal("2000.00"), response.getTotalAmount());
         assertEquals(1, response.getItems().size());
         verify(inventoryService).decreaseStockWithOptimisticLock(5L, 2);
+    }
+
+    @Test
+    void quoteCheckout_ShouldReturnPricingBreakdown() {
+        User user = User.builder()
+                .id(2L)
+                .username("alice")
+                .password("pw")
+                .email("alice@test.com")
+                .firstName("A")
+                .lastName("L")
+                .build();
+        when(userService.getByUsername("alice")).thenReturn(user);
+        when(checkoutPricingService.buildPricing(any(), any(), any(), any()))
+                .thenReturn(new OrderPricingResult(
+                        List.of(),
+                        new BigDecimal("100.00"),
+                        BigDecimal.ZERO,
+                        new BigDecimal("10.00"),
+                        BigDecimal.ZERO,
+                        new BigDecimal("110.00"),
+                        ShippingMethod.STANDARD,
+                        "NONE",
+                        null
+                ));
+
+        var response = orderService.quoteCheckout("alice", new CheckoutQuoteRequest());
+
+        assertEquals(new BigDecimal("100.00"), response.getSubtotalAmount());
+        assertEquals(new BigDecimal("110.00"), response.getTotalAmount());
+        assertEquals(ShippingMethod.STANDARD, response.getShippingMethod());
     }
 
     @Test

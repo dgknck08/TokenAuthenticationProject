@@ -13,10 +13,8 @@ import org.springframework.stereotype.Component;
 
 import com.example.ecommerce.auth.exception.JwtValidationException;
 import com.github.benmanes.caffeine.cache.Cache;
+import org.apache.commons.codec.digest.DigestUtils;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -205,12 +203,6 @@ this.userDetailsCache = userDetailsCache;
         if (token == null || token.isBlank()) {
             throw new IllegalArgumentException("Token is required");
         }
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
-            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 algorithm is not available", e);
-        }
+        return DigestUtils.sha256Hex(token);
     }
 }

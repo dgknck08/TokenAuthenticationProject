@@ -2,6 +2,7 @@ package com.example.ecommerce.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -64,6 +65,35 @@ class ProductServiceTest {
         assertEquals(1, result.getTotalElements());
         assertEquals("Phone", result.getContent().get(0).getName());
         assertEquals(new BigDecimal("999.99"), result.getContent().get(0).getPrice());
+    }
+
+    @Test
+    void getProductsByCategory_ShouldMapActiveProductsToDto() {
+        Product product = new Product(1L, "Phone", "Flagship", new BigDecimal("999.99"), "img", "Electronics", 10);
+        when(productRepository.findByCategoryIgnoreCaseAndActiveTrue("Electronics")).thenReturn(List.of(product));
+
+        var result = productService.getProductsByCategory("Electronics");
+
+        assertEquals(1, result.size());
+        assertEquals("Phone", result.get(0).getName());
+    }
+
+    @Test
+    void getProductsByBrand_ShouldMapActiveProductsToDto() {
+        Product product = new Product(1L, "Phone", "Flagship", new BigDecimal("999.99"), "img", "Electronics", 10);
+        when(productRepository.findByBrandIgnoreCaseAndActiveTrue("Acme")).thenReturn(List.of(product));
+
+        var result = productService.getProductsByBrand("Acme");
+
+        assertEquals(1, result.size());
+        assertEquals("Phone", result.get(0).getName());
+    }
+
+    @Test
+    void product_ShouldDefaultToActive() {
+        Product product = new Product();
+
+        assertTrue(product.isActive());
     }
 
     @Test

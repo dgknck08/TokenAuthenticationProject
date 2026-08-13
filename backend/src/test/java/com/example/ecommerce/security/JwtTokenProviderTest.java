@@ -139,4 +139,67 @@ class JwtTokenProviderTest {
             jwtTokenProvider.validateTokenStructure("invalidToken");
         });
     }
+
+    @Test
+    void getAuthentication_shouldLoadUserThroughCacheLoader() {
+        Claims claims = mock(Claims.class);
+        when(claims.getSubject()).thenReturn("authUser");
+        when(jwtClaimsCache.getIfPresent(anyString())).thenReturn(claims);
+
+        UserDetails userDetails = new User("authUser", "pw", List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        when(userDetailsService.loadUserByUsername("authUser")).thenReturn(userDetails);
+        when(userDetailsCache.get(eq("authUser"), any())).thenAnswer(invocation -> {
+            java.util.function.Function<String, UserDetails> loader = invocation.getArgument(1);
+            return loader.apply("authUser");
+        });
+
+        Authentication authentication = jwtTokenProvider.getAuthentication("token");
+
+        assertEquals("authUser", authentication.getName());
+        verify(userDetailsService).loadUserByUsername("authUser");
+    }
+
+    @Test
+    void invalidateTokenFromCache_shouldInvalidateClaimsAndValidationCaches() {
+        jwtTokenProvider.invalidateTokenFromCache("some-token");
+
+        verify(jwtClaimsCache).invalidate(anyString());
+        verify(jwtValidationCache).invalidate(anyString());
+    }
+
+    @Test
+    void invalidateTokenFromCache_shouldRejectBlankToken() {
+        assertThrows(IllegalArgumentException.class,
+                () -> jwtTokenProvider.invalidateTokenFromCache("  "));
+    }
+
+    @Test
+    void getUsernameFromToken_shouldParseWhenClaimsNotCached() {
+        Claims claims = mock(Claims.class);
+        when(claims.getSubject()).thenReturn("bob");
+        when(jwtClaimsCache.getIfPresent(anyString())).thenReturn(null);
+        when(jwtClaimsCache.get(anyString(), any())).thenAnswer(invocation -> {
+            java.util.function.Function<String, Claims> loader = invocation.getArgument(1);
+            return loader.apply("ignored");
+        });
+        when(jwtUtils.parseToken("token")).thenReturn(claims);
+
+        assertEquals("bob", jwtTokenProvider.getUsernameFromToken("token"));
+    }
+
+    @Test
+    void getAuthentication_shouldWrapUserLoadFailure() {
+        Claims claims = mock(Claims.class);
+        when(claims.getSubject()).thenReturn("authUser");
+        when(jwtClaimsCache.getIfPresent(anyString())).thenReturn(claims);
+        when(userDetailsService.loadUserByUsername("authUser"))
+                .thenThrow(new RuntimeException("boom"));
+        when(userDetailsCache.get(eq("authUser"), any())).thenAnswer(invocation -> {
+            java.util.function.Function<String, UserDetails> loader = invocation.getArgument(1);
+            return loader.apply("authUser");
+        });
+
+        assertThrows(IllegalStateException.class,
+                () -> jwtTokenProvider.getAuthentication("token"));
+    }
 }
